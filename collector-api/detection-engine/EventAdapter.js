@@ -47,7 +47,8 @@ export class EventAdapter {
         request_count: this.extractRequestCount(rawEvent),
         rate_violation_count: this.extractRateViolations(rawEvent),
         interaction_rate: this.extractInteractionRate(rawEvent),
-        idle_time: this.extractIdleTime(rawEvent)
+        idle_time: this.extractIdleTime(rawEvent),
+        session_duration: this.extractSessionDuration(rawEvent)
       },
 
       payloads: this.extractAllPayloads(rawEvent)
@@ -61,6 +62,7 @@ export class EventAdapter {
       normalized.behavior.rate_violation_count = rawEvent.behavior.rate_violation_count !== undefined ? rawEvent.behavior.rate_violation_count : normalized.behavior.rate_violation_count;
       normalized.behavior.interaction_rate = rawEvent.behavior.interaction_rate !== undefined ? rawEvent.behavior.interaction_rate : normalized.behavior.interaction_rate;
       normalized.behavior.idle_time = rawEvent.behavior.idle_time !== undefined ? rawEvent.behavior.idle_time : normalized.behavior.idle_time;
+      normalized.behavior.session_duration = rawEvent.behavior.session_duration !== undefined ? rawEvent.behavior.session_duration : normalized.behavior.session_duration;
     }
 
     return normalized;
@@ -242,13 +244,13 @@ export class EventAdapter {
    */
   extractInteractionRate(rawEvent) {
     if (rawEvent.userBehavior) {
-      const duration = rawEvent.sessionDuration || 1000; // Default to 1 second
-      const interactions = rawEvent.userBehavior.mouseClicks || 0 + rawEvent.userBehavior.keystrokes || 0;
+      const duration = (rawEvent.sessionDuration || 1000); // Default to 1 second
+      const interactions = (rawEvent.userBehavior.mouseClicks || 0) + (rawEvent.userBehavior.keystrokes || 0);
       return duration > 0 ? interactions / (duration / 1000) : 0; // Interactions per second
     }
     if (rawEvent.user_behavior) {
-      const duration = rawEvent.session_duration || 1000;
-      const interactions = rawEvent.user_behavior.mouse_clicks || 0 + rawEvent.user_behavior.key_strokes || 0;
+      const duration = (rawEvent.session_duration || 1000);
+      const interactions = (rawEvent.user_behavior.mouse_clicks || 0) + (rawEvent.user_behavior.key_strokes || 0);
       return duration > 0 ? interactions / (duration / 1000) : 0;
     }
     if (rawEvent.behavior?.interaction_rate !== undefined) {
@@ -272,6 +274,43 @@ export class EventAdapter {
     if (rawEvent.behavior?.idle_time !== undefined) {
       return rawEvent.behavior.idle_time;
     }
+    return 0;
+  }
+
+  /**
+   * Extracts session duration from raw event
+   * @param {Object} rawEvent - Raw event object
+   * @returns {number} Session duration in milliseconds
+   */
+  extractSessionDuration(rawEvent) {
+    // Check for explicit session duration fields
+    if (rawEvent.sessionDuration !== undefined) {
+      return rawEvent.sessionDuration;
+    }
+    if (rawEvent.session_duration !== undefined) {
+      return rawEvent.session_duration;
+    }
+    if (rawEvent.behavior?.session_duration !== undefined) {
+      return rawEvent.behavior.session_duration;
+    }
+    if (rawEvent.behavior?.sessionDuration !== undefined) {
+      return rawEvent.behavior.sessionDuration;
+    }
+    
+    // Calculate from user behavior data if available
+    if (rawEvent.userBehavior?.sessionStartTime && rawEvent.timestamp) {
+      return rawEvent.timestamp - rawEvent.userBehavior.sessionStartTime;
+    }
+    if (rawEvent.user_behavior?.session_start_time && rawEvent.timestamp) {
+      return rawEvent.timestamp - rawEvent.user_behavior.session_start_time;
+    }
+    
+    // Check authentication metrics for session info
+    if (rawEvent.authenticationMetrics?.sessionStartTime && rawEvent.timestamp) {
+      return rawEvent.timestamp - rawEvent.authenticationMetrics.sessionStartTime;
+    }
+    
+    // Default to 0 if no session duration info available
     return 0;
   }
 

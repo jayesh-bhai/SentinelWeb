@@ -16,9 +16,10 @@ export class ThreatScorer {
    * Runs threat scoring logic based on rule hits and optional ML input
    * @param {Array} ruleHits - Array of rule hits from RuleEngine
    * @param {Object} normalizedEvent - Normalized event object
+   * @param {Array} features - Pre-extracted features for ML model
    * @returns {Object} Threat assessment object
    */
-  async runThreatScoring(ruleHits, normalizedEvent) {
+  async runThreatScoring(ruleHits, normalizedEvent, features) {
     // Default values
     let is_threat = false;
     let threat_type = 'NONE';
@@ -56,7 +57,7 @@ export class ThreatScorer {
     // If ML is enabled, get anomaly score and adjust confidence based on ML input
     if (this.mlEnabled) {
       try {
-        const mlScore = await this.getMLAnomalyScore(normalizedEvent);
+        const mlScore = await this.getMLAnomalyScore(features);
         
         // ML can only modify confidence, not create threats
         if (is_threat) {
@@ -139,16 +140,13 @@ export class ThreatScorer {
 
   /**
    * Gets anomaly score from ML service
-   * @param {Object} normalizedEvent - Normalized event to analyze
+   * @param {Array} features - Pre-extracted features for the ML model
    * @returns {Number} Anomaly score between 0 and 1
    */
-  async getMLAnomalyScore(normalizedEvent) {
+  async getMLAnomalyScore(features) {
     // Call the ML service to get anomaly score
     // This should be non-blocking with timeout
     try {
-      // Prepare features for the ML model
-      const features = this.prepareFeatures(normalizedEvent);
-      
       // Make API call with timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
@@ -177,34 +175,6 @@ export class ThreatScorer {
       }
       return 0.5; // Default score if ML service unavailable
     }
-  }
-
-  /**
-   * Prepares features for ML model from normalized event
-   * @param {Object} normalizedEvent - Normalized event to extract features from
-   * @returns {Array} Array of numerical features
-   */
-  prepareFeatures(normalizedEvent) {
-    // Extract numerical features for the ML model
-    const features = [
-      // Behavioral features
-      normalizedEvent.behavior?.interaction_rate || 0,
-      normalizedEvent.behavior?.request_count || 0,
-      normalizedEvent.behavior?.failed_auth_attempts || 0,
-      normalizedEvent.behavior?.rate_violation_count || 0,
-      normalizedEvent.behavior?.idle_time || 0,
-      
-      // Actor information
-      normalizedEvent.actor?.session_id ? 1 : 0, // Presence of session
-      
-      // Request information
-      normalizedEvent.request?.method ? normalizedEvent.request.method.length : 0,
-      
-      // Time-based features
-      normalizedEvent.timestamp % 86400000, // Time of day in milliseconds
-    ];
-    
-    return features;
   }
 
   /**

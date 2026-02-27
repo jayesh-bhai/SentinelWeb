@@ -1,12 +1,13 @@
 // Detection Engine Module
 // Implements the core detection logic for SentinelWeb
-// Orchestrates the four separate modules: EventAdapter, RuleEngine, ThreatScorer, and Persistence
+// Orchestrates the modules: EventAdapter, RuleEngine, ThreatScorer, Persistence, and StateManager
 
 import { EventAdapter } from './EventAdapter.js';
 import { RuleEngine } from './RuleEngine.js';
 import { ThreatScorer } from './ThreatScorer.js';
 import { Persistence } from './Persistence.js';
 import { StateManager } from './StateManager.js';
+import { FeatureExtractor } from './FeatureExtractor.js';
 
 export class DetectionEngine {
   constructor() {
@@ -15,6 +16,7 @@ export class DetectionEngine {
     this.threatScorer = new ThreatScorer();
     this.persistence = new Persistence();
     this.stateManager = new StateManager();
+    this.featureExtractor = new FeatureExtractor();
 
   }
 
@@ -53,8 +55,11 @@ export class DetectionEngine {
         ruleHits.push(statefulHit);
       }
       
+      // Extract features for ML model
+      const features = this.featureExtractor.extractFeatures(normalizedEvent, ruleHits, this.stateManager);
+      
       // Run threat scoring
-      const threatAssessment = await this.threatScorer.runThreatScoring(ruleHits, normalizedEvent);
+      const threatAssessment = await this.threatScorer.runThreatScoring(ruleHits, normalizedEvent, features);
 
       // Generate alerts if threat detected
       if (threatAssessment.is_threat) {

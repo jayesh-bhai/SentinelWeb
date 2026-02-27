@@ -3,10 +3,10 @@
  * Tests the Detection Engine with 6 canonical events with detailed tracing
  */
 
-import { EventAdapter } from './EventAdapter.js';
-import { RuleEngine } from './RuleEngine.js';
-import { ThreatScorer } from './ThreatScorer.js';
-import { Persistence } from './Persistence.js';
+import { EventAdapter } from '../EventAdapter.js';
+import { RuleEngine } from '../RuleEngine.js';
+import { ThreatScorer } from '../ThreatScorer.js';
+import { Persistence } from '../Persistence.js';
 
 async function runDetailedValidationTests() {
   console.log('🛡️ Starting Detailed Adversarial Validation Tests...\n');

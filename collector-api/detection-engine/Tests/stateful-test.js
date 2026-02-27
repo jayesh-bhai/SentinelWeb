@@ -4,7 +4,7 @@
  * including success resets and cooldown spam prevention.
  */
 
-import { DetectionEngine } from './index.js';
+import { DetectionEngine } from '../index.js';
 
 // Helper function to easily create login events
 function createLoginEvent(ip, sessionId, timestampOffsetMs, isSuccess = false) {
