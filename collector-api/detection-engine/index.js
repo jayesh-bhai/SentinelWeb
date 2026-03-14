@@ -18,6 +18,9 @@ export class DetectionEngine {
     this.stateManager = new StateManager();
     this.featureExtractor = new FeatureExtractor();
 
+    // Dataset generation mode flags
+    this.datasetMode = false;
+    this.datasetLogger = null;
   }
 
   async initialize() {
@@ -25,7 +28,7 @@ export class DetectionEngine {
     await this.ruleEngine.initialize();
     await this.persistence.initialize();
     await this.threatScorer.checkMLService(); // Check if ML service is available
-    
+
     console.log('🛡️ Detection Engine initialized');
     console.log('📊 Loaded', this.ruleEngine.getRules().length, 'rules');
     console.log('💾 Database connected');
@@ -33,7 +36,7 @@ export class DetectionEngine {
   }
 
   // Main detection method - entry point for the detection engine
-  async processEvent(rawEvent) {
+  async processEvent(rawEvent, isAttack = 0) {
     try {
       // Validate event
       if (!this.eventAdapter.validateEvent(rawEvent)) {
@@ -54,10 +57,22 @@ export class DetectionEngine {
       if (statefulHit) {
         ruleHits.push(statefulHit);
       }
-      
+
       // Extract features for ML model
       const features = this.featureExtractor.extractFeatures(normalizedEvent, ruleHits, this.stateManager);
-      
+
+      // Intercept execution if in dataset mode
+      if (this.datasetMode && this.datasetLogger) {
+        this.datasetLogger.logFeatures(features, isAttack);
+        return {
+          is_threat: false,
+          threat_type: 'NONE',
+          severity: 'LOW',
+          confidence: 'LOW',
+          explanation: 'Logged features to dataset'
+        };
+      }
+
       // Run threat scoring
       const threatAssessment = await this.threatScorer.runThreatScoring(ruleHits, normalizedEvent, features);
 

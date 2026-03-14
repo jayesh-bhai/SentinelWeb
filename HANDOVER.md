@@ -135,10 +135,16 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 
 ### ML Phase (Current Focus)
 1. **Feature Engineering**: Complete deterministic feature extraction with FeatureExtractor (COMPLETED)
-2. **Model Training**: Train Isolation Forest model with behavioral data
-3. **Anomaly Detection**: Implement advanced pattern recognition beyond rules
-4. **Confidence Scoring**: Integrate ML confidence adjustments into threat scoring
-5. **Performance Tuning**: Optimize ML model response times and accuracy
+2. **Dataset Generation** (CURRENT ONGOING TASK): 
+   - **Goal**: Create a clean, deterministic `dataset.csv` for unsupervised training.
+   - **Components to build**: 
+     - `DatasetLogger.js`: A lightweight CSV writer.
+     - `generate-dataset.js`: A simulation script to generate exactly 1,200 events (1,000 normal baseline, 200 attacks).
+   - **Execution Rules**: Must use a monotonic fake clock (e.g., `baseTime + 1000ms`) instead of `Date.now()` to ensure the math and velocity calculations are perfectly reproducible.
+   - **Engine Updates**: Add a temporary `datasetMode` flag to `DetectionEngine` to intercept and log features.
+3. **Model Training**: Train an unsupervised Isolation Forest model in Python using the generated `dataset.csv`.
+4. **ML Service Deployment**: Build a lightweight FastAPI endpoint to serve the trained model.
+5. **Confidence Scoring**: Blend the ML anomaly scores with the Rule Engine results inside the ThreatScorer.
 
 ### Short-term Roadmap
 1. **Dashboard Development**: Create visualization for detection results
@@ -180,6 +186,11 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 - Alert evidence must be structured
 - Each module must be testable in isolation
 
+### Machine Learning Constraints
+- Feature schema must remain strictly locked (12 deterministic features).
+- Dataset generation must be purely deterministic (no randomized timestamps).
+- Model must be unsupervised (Isolation Forest) with no label dependency during training.
+
 ### Performance Requirements
 - Sub-200ms response time for threat detection
 - Non-blocking ML integration with timeout protection
@@ -187,6 +198,6 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 - Minimal overhead for agent instrumentation
 
 ---
-**Last Updated**: January 12, 2026
-**Status**: Refactoring Complete, Ready for ML Integration & Testing
-**Handover State**: Ready for continuation by next engineer
+**Last Updated**: February 27, 2026
+**Status**: Feature Extraction Complete, Entering Dataset Generation Phase
+**Handover State**: Ready for dataset simulation and ML model training
