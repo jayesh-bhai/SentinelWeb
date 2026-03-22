@@ -50,6 +50,7 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 - ✅ Stateful behavioral analysis with time-windowed threat detection
 - ✅ Success reset mechanisms and cooldown protection
 - ✅ FeatureExtractor module with deterministic 12-feature schema
+- ✅ Full Pipeline Validation (Real HTTP via Axios Simulator spanning Frontend API → SQLite)
 
 ### Refactoring Achievements
 - **Phase 1**: Separated responsibilities into 4 distinct modules
@@ -128,29 +129,26 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 ### Current Status
 - All canonical test events (E1-E6) are processed correctly
 - Detection pipeline is functionally correct for baseline scenarios
-- No known critical bugs in the detection engine
 - Stateful behavioral analysis fully operational
+
+### Active Critical Bugs
+- **Collector API Routing Bug**: `server.js` (Lines 107-108) forcefully overwrites `event_type: 'FRONTEND_EVENT'` onto the event loop. This specifically destroys `StateManager` polymorphic tracking (which relies on `event_type === "login_attempt"`) from ever succeeding through remote real-world Collector API REST calls.
 
 ## NEXT STEPS
 
-### ML Phase (Current Focus)
+### ML Phase (COMPLETED)
 1. **Feature Engineering**: Complete deterministic feature extraction with FeatureExtractor (COMPLETED)
-2. **Dataset Generation** (CURRENT ONGOING TASK): 
-   - **Goal**: Create a clean, deterministic `dataset.csv` for unsupervised training.
-   - **Components to build**: 
-     - `DatasetLogger.js`: A lightweight CSV writer.
-     - `generate-dataset.js`: A simulation script to generate exactly 1,200 events (1,000 normal baseline, 200 attacks).
-   - **Execution Rules**: Must use a monotonic fake clock (e.g., `baseTime + 1000ms`) instead of `Date.now()` to ensure the math and velocity calculations are perfectly reproducible.
-   - **Engine Updates**: Add a temporary `datasetMode` flag to `DetectionEngine` to intercept and log features.
-3. **Model Training**: Train an unsupervised Isolation Forest model in Python using the generated `dataset.csv`.
-4. **ML Service Deployment**: Build a lightweight FastAPI endpoint to serve the trained model.
-5. **Confidence Scoring**: Blend the ML anomaly scores with the Rule Engine results inside the ThreatScorer.
+2. **Dataset Generation**: Created a clean, deterministic `dataset.csv` for unsupervised training with exactly 1200 events (1000 normal, 200 attacks) using a monotonic clock. (COMPLETED)
+3. **Model Training**: Trained an unsupervised Isolation Forest model iteratively in Python using the generated `dataset.csv`, generating `model.pkl` and `scaler.pkl`. (COMPLETED)
+4. **ML Service Deployment**: Built a lightweight FastAPI endpoint (`ml/inference_api.py`) to serve the trained model natively. (COMPLETED)
+5. **Confidence Scoring & Engine Integration**: Built `MLClient.js` to asynchronously pipeline metrics natively into the Node.js `ThreatScorer` logic safely without overwriting authoritative rule triggers. (COMPLETED)
 
 ### Short-term Roadmap
-1. **Dashboard Development**: Create visualization for detection results
-2. **Rule Management**: Implement dynamic rule configuration system
-3. **Alerting System**: Enhance alert delivery mechanisms
-4. **Documentation**: Complete technical documentation for all components
+1. **Fix Parsing Route Bug**: Refactor `server.js` to intelligently preserve or fallback the `event_type` natively.
+2. **Dashboard Development**: Create visualization React client for detection results
+3. **Rule Management**: Implement dynamic rule configuration system
+4. **Alerting System**: Enhance alert delivery mechanisms
+5. **Documentation**: Complete technical documentation for all components
 
 ### Long-term Enhancements
 1. **Advanced ML Models**: Implement additional anomaly detection algorithms
@@ -198,6 +196,6 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 - Minimal overhead for agent instrumentation
 
 ---
-**Last Updated**: February 27, 2026
-**Status**: Feature Extraction Complete, Entering Dataset Generation Phase
-**Handover State**: Ready for dataset simulation and ML model training
+**Last Updated**: March 22, 2026
+**Status**: ML Contextual Hybrid Engine Complete
+**Handover State**: Core engine finished, ready to build visualization dashboards and reporting layers

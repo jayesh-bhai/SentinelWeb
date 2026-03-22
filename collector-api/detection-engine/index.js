@@ -8,6 +8,7 @@ import { ThreatScorer } from './ThreatScorer.js';
 import { Persistence } from './Persistence.js';
 import { StateManager } from './StateManager.js';
 import { FeatureExtractor } from './FeatureExtractor.js';
+import { MLClient } from './MLClient.js';
 
 export class DetectionEngine {
   constructor() {
@@ -17,6 +18,7 @@ export class DetectionEngine {
     this.persistence = new Persistence();
     this.stateManager = new StateManager();
     this.featureExtractor = new FeatureExtractor();
+    this.mlClient = new MLClient();
 
     // Dataset generation mode flags
     this.datasetMode = false;
@@ -27,12 +29,10 @@ export class DetectionEngine {
     // Initialize all modules
     await this.ruleEngine.initialize();
     await this.persistence.initialize();
-    await this.threatScorer.checkMLService(); // Check if ML service is available
 
     console.log('🛡️ Detection Engine initialized');
     console.log('📊 Loaded', this.ruleEngine.getRules().length, 'rules');
     console.log('💾 Database connected');
-    console.log('🤖 ML Service:', this.threatScorer.mlEnabled ? 'ENABLED' : 'DISABLED');
   }
 
   // Main detection method - entry point for the detection engine
@@ -73,8 +73,20 @@ export class DetectionEngine {
         };
       }
 
-      // Run threat scoring
-      const threatAssessment = await this.threatScorer.runThreatScoring(ruleHits, normalizedEvent, features);
+      // Query the ML inference API
+      const mlResult = await this.mlClient.predict(features);
+
+      // Run threat scoring (Hybrid Rule + ML Model fusion)
+      const threatAssessment = await this.threatScorer.runThreatScoring(ruleHits, normalizedEvent, features, mlResult);
+
+      // 🔴 QA VALIDATION Requirement: MANDATORY DEBUG LOGGING
+      console.log('\n[DEBUG LOG - QA VALIDATION]');
+      console.log({
+        ruleHits: ruleHits.map(r => r.rule_id),
+        ml_score: mlResult.anomaly_score,
+        final_decision: threatAssessment.severity
+      });
+      console.log('-------------------------------\n');
 
       // Generate alerts if threat detected
       if (threatAssessment.is_threat) {

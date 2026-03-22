@@ -1,0 +1,42 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+venv/
+env/
+.env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+
+# IDE & Editor
+.vscode/
+.idea/
+
+# OS Junk
+.DS_Store
+Thumbs.db
+
+# Databases & Active Data Sets (CRITICAL)
+*.db
+*.sqlite
+*.sqlite3
+dataset.csv
+*.csv
+
+# Artifacts
+model.pkl
+scaler.pkl

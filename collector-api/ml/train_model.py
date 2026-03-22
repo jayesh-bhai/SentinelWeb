@@ -66,5 +66,39 @@ def main():
     except Exception as e:
         print(f"❌ Error during sanity check: {e}")
 
+    # --- Full Dataset Evaluation ---
+    print("\n--- Full Dataset Evaluation ---")
+
+    # Predict on full dataset
+    pred = model.predict(X_scaled)
+
+    # Convert IsolationForest output
+    # 1 = normal
+    # -1 = anomaly
+    pred_labels = np.where(pred == -1, 1, 0)
+
+    # Compare against ground truth
+    total = len(y)
+    correct = (pred_labels == y).sum()
+
+    tp = ((pred_labels == 1) & (y == 1)).sum()
+    fp = ((pred_labels == 1) & (y == 0)).sum()
+    fn = ((pred_labels == 0) & (y == 1)).sum()
+
+    print(f"Total samples: {total}")
+    print(f"Correct predictions: {correct}")
+    print(f"Accuracy: {correct / total:.3f}")
+
+    print("\nAttack detection:")
+    print(f"True Positives: {tp}")
+    print(f"False Positives: {fp}")
+    print(f"False Negatives: {fn}")
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+
+    print(f"Precision: {precision:.3f}")
+    print(f"Recall: {recall:.3f}")
+
 if __name__ == "__main__":
     main()

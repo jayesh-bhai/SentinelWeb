@@ -7,88 +7,78 @@
  */
 
 export class ThreatScorer {
-  constructor(mlApiUrl = 'http://localhost:8000/predict') {
-    this.mlApiUrl = mlApiUrl;
-    this.mlEnabled = false;
-  }
+  constructor() {}
 
   /**
    * Runs threat scoring logic based on rule hits and optional ML input
    * @param {Array} ruleHits - Array of rule hits from RuleEngine
-   * @param {Object} normalizedEvent - Normalized event object
+   * @param {Object} event - Normalized event object
    * @param {Array} features - Pre-extracted features for ML model
+   * @param {Object} mlResult - The result from ML Inference service { anomaly_score, is_anomaly }
    * @returns {Object} Threat assessment object
    */
-  async runThreatScoring(ruleHits, normalizedEvent, features) {
-    // Default values
-    let is_threat = false;
-    let threat_type = 'NONE';
-    let severity = 'LOW';
-    let confidence = 'LOW';
-    let explanation = 'No threats detected';
+  async runThreatScoring(ruleHits, event, features, mlResult) {
+  
+    // Check severity triggers
+    const hasHighRule = ruleHits.some(r => r.severity === "HIGH");
+    const hasMediumRule = ruleHits.some(r => r.severity === "MEDIUM");
 
-    // Get highest severity from rule hits
-    const highSeverityHits = ruleHits.filter(hit => hit.severity === 'HIGH');
-    const mediumSeverityHits = ruleHits.filter(hit => hit.severity === 'MEDIUM');
-    const lowSeverityHits = ruleHits.filter(hit => hit.severity === 'LOW');
-
-    // Apply threat logic - rules determine if there's a threat
-    if (highSeverityHits.length > 0) {
-      is_threat = true;
-      threat_type = highSeverityHits[0].rule_id || 'UNKNOWN';
-      severity = 'HIGH';
-      confidence = 'HIGH';
-      explanation = this.generateExplanation(highSeverityHits, 'High severity threat detected');
-    } else if (mediumSeverityHits.length >= 1) { // Multiple medium rules
-      is_threat = true;
-      threat_type = mediumSeverityHits[0].rule_id || 'UNKNOWN';
-      severity = 'MEDIUM';
-      confidence = 'MEDIUM';
-      explanation = this.generateExplanation(mediumSeverityHits, 'Multiple medium severity threats detected');
-    } else if (lowSeverityHits.length > 0) {
-      // Only low severity rules - not considered a threat
-      is_threat = false;
-      threat_type = lowSeverityHits[0].rule_id || 'UNKNOWN';
-      severity = 'LOW';
-      confidence = 'LOW';
-      explanation = this.generateExplanation(lowSeverityHits, 'Low severity anomalies detected, but not considered a threat');
+    // Rule 1: High severity overrides everything. ML is ignored for decision making
+    if (hasHighRule) {
+      return {
+        is_threat: true,
+        threat_type: ruleHits.find(r => r.severity === "HIGH").rule_id,
+        severity: "HIGH",
+        confidence: "HIGH",
+        explanation: "High severity rule triggered" + (mlResult.is_anomaly ? " (Confirmed by ML behavior)" : ""),
+        rule_hits_count: ruleHits.length
+      };
     }
 
-    // If ML is enabled, get anomaly score and adjust confidence based on ML input
-    if (this.mlEnabled) {
-      try {
-        const mlScore = await this.getMLAnomalyScore(features);
-        
-        // ML can only modify confidence, not create threats
-        if (is_threat) {
-          // If threat exists, ML can increase or decrease confidence
-          if (mlScore > 0.8) {
-            // High ML score increases confidence in threat
-            if (confidence === 'MEDIUM') confidence = 'HIGH';
-            explanation += ` ML model confirms anomalous behavior (score: ${mlScore.toFixed(2)}).`;
-          } else if (mlScore < 0.3) {
-            // Low ML score decreases confidence in threat
-            if (confidence === 'HIGH') confidence = 'MEDIUM';
-            else if (confidence === 'MEDIUM') confidence = 'LOW';
-            explanation += ` ML model suggests normal behavior (score: ${mlScore.toFixed(2)}), reducing confidence.`;
-          }
-        } else {
-          // No threat from rules, ML cannot create a threat
-          // But we can mention ML score for informational purposes
-          explanation += ` ML model score: ${mlScore.toFixed(2)} (not creating threat).`;
-        }
-      } catch (error) {
-        console.error('Error getting ML score:', error);
-        // Continue with rule-based results
-      }
+    // Rule 2: Medium severity escalates to High if ML also sees anomalous behavior
+    if (hasMediumRule && mlResult.is_anomaly) {
+      return {
+        is_threat: true,
+        threat_type: ruleHits.find(r => r.severity === "MEDIUM").rule_id,
+        severity: "HIGH",
+        confidence: "MEDIUM",
+        explanation: "Rule trigger supported by ML anomaly",
+        rule_hits_count: ruleHits.length
+      };
+    }
+    
+    // Fallback: Medium severity alone stays Medium
+    if (hasMediumRule) {
+      return {
+        is_threat: true,
+        threat_type: ruleHits.find(r => r.severity === "MEDIUM").rule_id,
+        severity: "MEDIUM",
+        confidence: "LOW",
+        explanation: "Medium severity rule triggered independently",
+        rule_hits_count: ruleHits.length
+      };
     }
 
+    // Rule 3: No rules hit, but ML flagged behavior as anomalous 
+    // It creates a LOW severity observational anomaly but DOES NOT issue a hard threat
+    if (!ruleHits.length && mlResult.is_anomaly) {
+      return {
+        is_threat: false,
+        threat_type: "BEHAVIORAL_ANOMALY",
+        severity: "LOW",
+        confidence: "LOW",
+        explanation: "Behavioral anomaly detected by ML",
+        rule_hits_count: 0
+      };
+    }
+
+    // Rule 4: No hits anywhere
     return {
-      is_threat,
-      threat_type,
-      severity,
-      confidence,
-      explanation,
+      is_threat: false,
+      threat_type: "NONE",
+      severity: "LOW",
+      confidence: "LOW",
+      explanation: "No threat detected",
       rule_hits_count: ruleHits.length
     };
   }
@@ -136,76 +126,6 @@ export class ThreatScorer {
 
     // Truncate to 50 characters max
     return strValue.length > 50 ? strValue.substring(0, 50) + '...' : strValue;
-  }
-
-  /**
-   * Gets anomaly score from ML service
-   * @param {Array} features - Pre-extracted features for the ML model
-   * @returns {Number} Anomaly score between 0 and 1
-   */
-  async getMLAnomalyScore(features) {
-    // Call the ML service to get anomaly score
-    // This should be non-blocking with timeout
-    try {
-      // Make API call with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
-      
-      const response = await fetch(this.mlApiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ features }),
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (response.ok) {
-        const result = await response.json();
-        return result.score || 0.5; // Default to 0.5 if no score returned
-      } else {
-        console.log('ML API returned error, using default score');
-        return 0.5;
-      }
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        console.log('ML API call timed out, using default score');
-      } else {
-        console.log('ML API call failed, using default score');
-      }
-      return 0.5; // Default score if ML service unavailable
-    }
-  }
-
-  /**
-   * Checks if ML service is available
-   */
-  async checkMLService() {
-    // Simple check to see if ML service is available
-    try {
-      const response = await fetch(this.mlApiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ features: [] })
-      });
-      
-      if (response.ok) {
-        this.mlEnabled = true;
-        console.log('🤖 ML Service is available');
-      } else {
-        console.log('🤖 ML Service not available - running in rules-only mode');
-      }
-    } catch (error) {
-      console.log('🤖 ML Service not available - running in rules-only mode');
-    }
-  }
-
-  /**
-   * Sets ML availability status
-   * @param {Boolean} enabled - Whether ML is enabled
-   */
-  setMLEnabled(enabled) {
-    this.mlEnabled = enabled;
   }
 }
 

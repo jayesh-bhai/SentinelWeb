@@ -1,7 +1,0 @@
-{
-  "python.defaultInterpreterPath": "d:/sentinelweb/collector-api/ml/venv/Scripts/python.exe",
-  "python.analysis.extraPaths": [
-    "d:/sentinelweb/collector-api/ml"
-  ],
-  "python.terminal.activateEnvironment": true
-}
