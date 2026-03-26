@@ -17,6 +17,11 @@ const __dirname = path.dirname(__filename);
 export class Persistence {
   constructor() {
     this.db = null;
+    this.eventQueue = [];
+    this.alertQueue = [];
+    this.flushInterval = null;
+    this.MAX_QUEUE_SIZE = 10000;
+    this.isFlushing = false;
   }
 
   /**
@@ -58,6 +63,9 @@ export class Persistence {
     `);
 
     console.log('💾 Detection Engine database tables created');
+    
+    // Start asynchronous database flushing every 500ms
+    this.flushInterval = setInterval(() => this.flushQueues(), 500);
   }
 
   /**
@@ -65,17 +73,12 @@ export class Persistence {
    * @param {Object} rawEvent - Raw event to store
    */
   async storeRawEvent(rawEvent) {
-    // Store the raw event in the database
-    await this.db.run(
-      `INSERT INTO raw_events (session_id, server_id, event_type, event_data) 
-       VALUES (?, ?, ?, ?)`,
-      [
-        rawEvent.sessionId || rawEvent.session_id || 'unknown',
-        rawEvent.serverId || rawEvent.server_id || 'unknown',
-        rawEvent.event_type || 'unknown',
-        JSON.stringify(rawEvent)
-      ]
-    );
+    // Instantly push the raw event into memory RAM queue preventing NodeJS block
+    if (this.eventQueue.length < this.MAX_QUEUE_SIZE) {
+      this.eventQueue.push(rawEvent);
+    } else {
+      console.warn("⚠️ Event Queue overflow, dropping incoming event to prevent Memory Exhaustion");
+    }
   }
 
   /**
@@ -83,22 +86,12 @@ export class Persistence {
    * @param {Object} alertData - Alert data to store
    */
   async storeAlert(alertData) {
-    // Create alert record
-    await this.db.run(
-      `INSERT INTO alerts (session_id, server_id, threat_type, severity, confidence, explanation, rule_hits, offending_payload, matched_location) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        alertData.session_id,
-        alertData.server_id,
-        alertData.threat_type,
-        alertData.severity,
-        alertData.confidence,
-        alertData.explanation,
-        alertData.rule_hits,
-        alertData.offending_payload.substring(0, 100), // Truncate for storage
-        alertData.matched_location
-      ]
-    );
+    // Instantly push the alert into memory RAM queue
+    if (this.alertQueue.length < this.MAX_QUEUE_SIZE) {
+      this.alertQueue.push(alertData);
+    } else {
+      console.warn("⚠️ Alert Queue overflow, dropping incoming alert to prevent Memory Exhaustion");
+    }
 
     // Log to console for demo purposes
     console.log(`🚨 THREAT DETECTED [${alertData.severity}]`);
@@ -108,6 +101,79 @@ export class Persistence {
     console.log(`   Session: ${alertData.session_id}`);
     console.log(`   Matched Location: ${alertData.matched_location}`);
     console.log(`   Rules Triggered: ${JSON.parse(alertData.rule_hits).length}`);
+  }
+
+  /**
+   * Background process to dump Memory Queues safely to Disc
+   */
+  async flushQueues() {
+    if (!this.db || this.isFlushing) return;
+    
+    this.isFlushing = true;
+    try {
+      // 1. Snapshot Event Queue
+      const eventsToProcess = [...this.eventQueue];
+      this.eventQueue = [];
+      
+      if (eventsToProcess.length > 0) {
+      try {
+        await this.db.run('BEGIN TRANSACTION');
+        const stmt = await this.db.prepare(
+          `INSERT INTO raw_events (session_id, server_id, event_type, event_data) 
+           VALUES (?, ?, ?, ?)`
+        );
+        for (const rawEvent of eventsToProcess) {
+          await stmt.run([
+            rawEvent.sessionId || rawEvent.session_id || 'unknown',
+            rawEvent.serverId || rawEvent.server_id || 'unknown',
+            rawEvent.event_type || 'unknown',
+            JSON.stringify(rawEvent)
+          ]);
+        }
+        await stmt.finalize();
+        await this.db.run('COMMIT');
+      } catch (err) {
+        try { await this.db.run('ROLLBACK'); } catch(e) {}
+        console.error('❌ Error batch inserting raw events:', err);
+        console.warn('⚠️ Dropping event batch to prevent Infinite Retries tracking OOM memory leaks.');
+      }
+    }
+    
+    // 2. Snapshot Alert Queue
+    const alertsToProcess = [...this.alertQueue];
+    this.alertQueue = [];
+    
+    if (alertsToProcess.length > 0) {
+      try {
+        await this.db.run('BEGIN TRANSACTION');
+        const stmt = await this.db.prepare(
+          `INSERT INTO alerts (session_id, server_id, threat_type, severity, confidence, explanation, rule_hits, offending_payload, matched_location) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        );
+        for (const alertData of alertsToProcess) {
+          await stmt.run([
+            alertData.session_id,
+            alertData.server_id,
+            alertData.threat_type,
+            alertData.severity,
+            alertData.confidence,
+            alertData.explanation,
+            alertData.rule_hits,
+            alertData.offending_payload.substring(0, 100),
+            alertData.matched_location
+          ]);
+        }
+        await stmt.finalize();
+        await this.db.run('COMMIT');
+      } catch (err) {
+        try { await this.db.run('ROLLBACK'); } catch(e) {}
+        console.error('❌ Error batch inserting alerts:', err);
+        console.warn('⚠️ Dropping alert batch to prevent Infinite Retries tracking OOM memory leaks.');
+      }
+    }
+    } finally {
+      this.isFlushing = false;
+    }
   }
 
   /**
@@ -142,6 +208,8 @@ export class Persistence {
    * Closes the database connection
    */
   async close() {
+    if (this.flushInterval) clearInterval(this.flushInterval);
+    await this.flushQueues();
     if (this.db) {
       await this.db.close();
     }

@@ -4,6 +4,10 @@ export class StateManager {
     this.ipFailures = new Map();
     this.sessionFailures = new Map();
     
+    // 🌍 Global Request Rates
+    this.ipRequests = new Map();
+    this.sessionRequests = new Map();
+    
     // 🌐 Tracking unique endpoints accessed by session
     this.sessionEndpoints = new Map();
     
@@ -18,12 +22,16 @@ export class StateManager {
   recordEvent(event) {
     if (!event.actor || (!event.actor.ip && !event.actor.session_id)) return null;
   
-    // Only process login attempts
-    if (event.event_type !== "login_attempt") return null;
-  
     const now = event.timestamp;
     const ip = event.actor.ip;
     const session = event.actor.session_id;
+
+    // GLOBAL TRACKING (Record ALL requests to properly feed temporal ML)
+    if (ip) this.addTimestamp(this.ipRequests, ip, now);
+    if (session) this.addTimestamp(this.sessionRequests, session, now);
+
+    // Only process login attempts for the Native RuleEngine alerts
+    if (event.event_type !== "login_attempt") return null;
   
     const isSuccess = event.behavior && event.behavior.successful_auth_attempts > 0;
     const isFailure = event.behavior && event.behavior.failed_auth_attempts > 0;
@@ -86,9 +94,25 @@ export class StateManager {
   }
 
   addFailure(map, key, timestamp) {
+    this.addTimestamp(map, key, timestamp);
+  }
+
+  addTimestamp(map, key, timestamp) {
     if (!key) return;
     if (!map.has(key)) map.set(key, []);
     map.get(key).push(timestamp);
+  }
+
+  getIpRequestRate(ip, now) {
+    return this.countRecent(this.ipRequests, ip, now);
+  }
+
+  getSessionRequestRate(sessionId, now) {
+    return this.countRecent(this.sessionRequests, sessionId, now);
+  }
+  
+  getIpFailuresLast60s(ip, now) {
+    return this.getFailureCount(ip, now);
   }
 
   countRecent(map, key, now) {

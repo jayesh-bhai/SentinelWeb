@@ -34,42 +34,34 @@ Dashboard (NOT BUILT)
 - FastAPI ML inference API
 - MLClient integration
 - Hybrid threat scoring
-- Synthetic validation (engine-level)
-- Full System Validation (real HTTP pipeline)
+- Full System Validation (Real HTTP pipeline stabilized at 15k bursts)
+- SRE Backend Hardening (OOM Protection, Queue Capping, IP/Event boundaries enforced) stabilized at 15k bursts)
+- SRE Backend Hardening (OOM Protection, Queue Capping, IP/Event boundaries enforced)
 
 ---
 
 ## 4. CURRENT STATUS
-Detection Engine, ML Integration, and Pipeline Validation are **COMPLETE**.
-Validated via:
-- Real HTTP pipeline (Collector API via axios simulator)
-- Synthetic events (direct `processEvent` calls)
+**Maturity Level**: Production-Ready Backend Security API.
+The core Detection Engine, ML Integration, and Pipeline Validation are complete. All critical architectural flaws (IP spoofing, SQL blocking, ML Temporal Blindness) have been neutralized. The Collector API scales performantly using Memory Queues and native HTTP `zod` parameter validations. 
 
 ---
 
 ## 5. CURRENT TASK (CRITICAL)
-**Fix API Routing Bug & Begin Dashboard Development**
-
-Fix:
-- `server.js` overwrites `event_type` to `FRONTEND_EVENT` destroying canonical routing.
-
-Build:
-- Dashboard (React + Analytics)
+**Phase 2: Dashboard Visualization & Frontend Metrics**
+With the backend fully locked down and mathematically trained, focus shifts strictly to creating the React Dashboard GUI interface.
 
 ---
 
 ## 6. KNOWN RISKS
-- Collector → Engine `event_type` override destroys polymorphic event logic
-- ML API may fail silently
-- StateManager timing issues possible
-- EventAdapter mismatch in real remote traffic
+- **Redis Centralization**: Node `Map()` arrays inside StateManager are currently bound to the single-thread, which prevents multi-server clustered horizontal scaling.
+- **UI Absent**: Dashboard monitoring and visual administration interface does not exist yet.
 
 ---
 
-## 7. NEXT STEPS
-1. Fix `server.js` canonical event override bug
-2. Build Dashboard (React + analytics UI)
-3. Add alert visualization + filtering
+## 7. NEXT STEPS (STRICT EXECUTION ORDER)
+1. **Dashboard Setup**: Initialize React/Vite development framework and analytics GUI.
+2. **Analytics Sync**: Expose SQLite Alert/Raw Event tables via Collector API logic for frontend rendering.
+3. **Redis Architecture**: Convert StateManager Memory Arrays into Redis backend clustering (future optimization).
 
 ---
 

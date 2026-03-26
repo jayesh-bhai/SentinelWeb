@@ -44,20 +44,20 @@ export class FeatureExtractor {
     // Calculate features in locked order (0-11)
     const features = [];
 
-    // Feature 0: failed_login_count - number - stateful window
-    features[0] = stateManager.getFailureCount(ip, normalizedEvent.timestamp) || 0;
+    // Feature 0: ip_failed_attempts_last_60s (Normalized 0-1)
+    const ipFailuresCount = stateManager.getFailureCount(ip, normalizedEvent.timestamp) || 0;
+    features[0] = Math.min(ipFailuresCount, 10) / 10;
 
-    // Feature 1: failed_login_velocity - number - stateful window
-    features[1] = stateManager.getFailureVelocity(ip, normalizedEvent.timestamp) || 0;
+    // Feature 1: ip_request_rate (Normalized 0-1)
+    const ipRequestRate = stateManager.getIpRequestRate ? stateManager.getIpRequestRate(ip, normalizedEvent.timestamp) : 0;
+    features[1] = Math.min(ipRequestRate, 100) / 100;
 
-    // Feature 2: success_failure_ratio - number - normalized event
-    const failedAuthAttempts = normalizedEvent.behavior?.failed_auth_attempts || 0;
-    const successfulAuthAttempts = normalizedEvent.behavior?.successful_auth_attempts || 0;
-    const totalAuthAttempts = failedAuthAttempts + successfulAuthAttempts;
-    features[2] = totalAuthAttempts > 0 ? successfulAuthAttempts / totalAuthAttempts : 0;
+    // Feature 2: session_request_rate (Normalized 0-1)
+    const sessionRequestRate = stateManager.getSessionRequestRate ? stateManager.getSessionRequestRate(sessionId, normalizedEvent.timestamp) : 0;
+    features[2] = Math.min(sessionRequestRate, 100) / 100;
 
-    // Feature 3: request_count - number - normalized event
-    features[3] = normalizedEvent.behavior?.request_count || 0;
+    // Feature 3: failure_ratio (0-1)
+    features[3] = ipRequestRate > 0 ? (ipFailuresCount / ipRequestRate) : 0;
 
     // Feature 4: rate_violation_count - number - normalized event
     features[4] = normalizedEvent.behavior?.rate_violation_count || 0;

@@ -36,6 +36,7 @@ async function simulateBruteForce() {
       const payload = {
         ip_address: ip,
         sessionId: sessionId,
+        event_type: 'login_attempt',
         url: 'http://example.com/login',
         behavior: {
           failed_auth_attempts: i,

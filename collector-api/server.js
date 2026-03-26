@@ -1,6 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import { DetectionEngine } from './detection-engine/index.js';
+import { z } from 'zod';
 
 const app = express();
 
@@ -90,8 +91,48 @@ app.get('/health', (req, res) => {
   });
 });
 
+const eventSchema = z.object({
+  sessionId: z.string({ required_error: "sessionId is strictly required" }),
+  url: z.string().optional(),
+  request: z.object({
+    method: z.string().optional()
+  }).passthrough().optional(),
+  behavior: z.object({}).passthrough().optional()
+}).passthrough();
+
+const validatePayload = (schema) => (req, res, next) => {
+  const result = schema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Malformed Request Payload',
+      errors: result.error.errors
+    });
+  }
+  next();
+};
+
+function sanitizeEventType(input) {
+  const allowed = new Set([
+    'login_attempt', 
+    'http_request', 
+    'api_call', 
+    'auth_summary', 
+    'user_activity', 
+    'api_usage'
+  ]);
+  return allowed.has(input) ? input : 'GENERIC_EVENT';
+}
+
+function normalizeIp(ip) {
+  if (!ip) return 'unknown';
+  if (ip === '::1') return '127.0.0.1';
+  if (ip.startsWith('::ffff:')) return ip.replace('::ffff:', '');
+  return ip;
+}
+
 // Endpoint for frontend agent
-app.post("/api/collect/frontend", async (req, res) => {
+app.post("/api/collect/frontend", validatePayload(eventSchema), async (req, res) => {
   // Update statistics
   stats.requests.frontend.count++;
   stats.requests.frontend.lastReceived = new Date().toISOString();
@@ -102,10 +143,16 @@ app.post("/api/collect/frontend", async (req, res) => {
   
   // Process the event through the detection engine
   try {
-    const threatAssessment = await detectionEngine.processEvent({
+    const realIp = normalizeIp(req.socket.remoteAddress);
+    const enrichedEvent = {
       ...req.body,
-      event_type: 'FRONTEND_EVENT',
-      source: 'frontend_agent'
+      ip_address: realIp
+    };
+    
+    const threatAssessment = await detectionEngine.processEvent({
+      ...enrichedEvent,
+      event_type: sanitizeEventType(req.body.event_type),
+      source: req.body.source || 'frontend_agent'
     });
     
     // Log threat assessment if detected
@@ -224,7 +271,7 @@ app.post("/api/collect/frontend", async (req, res) => {
 });
 
 // Endpoint for backend agent
-app.post("/api/collect/backend", async (req, res) => {
+app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) => {
   // Update statistics
   stats.requests.backend.count++;
   stats.requests.backend.lastReceived = new Date().toISOString();
@@ -235,10 +282,16 @@ app.post("/api/collect/backend", async (req, res) => {
   
   // Process the event through the detection engine
   try {
-    const threatAssessment = await detectionEngine.processEvent({
+    const realIp = normalizeIp(req.socket.remoteAddress);
+    const enrichedEvent = {
       ...req.body,
-      event_type: 'BACKEND_EVENT',
-      source: 'backend_agent'
+      ip_address: realIp
+    };
+
+    const threatAssessment = await detectionEngine.processEvent({
+      ...enrichedEvent,
+      event_type: sanitizeEventType(req.body.event_type),
+      source: req.body.source || 'backend_agent'
     });
     
     // Log threat assessment if detected
