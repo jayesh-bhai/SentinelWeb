@@ -20,7 +20,7 @@ Detection Engine
 ↓
 SQLite (alerts)
 ↓
-Dashboard (NOT BUILT)
+Dashboard (React, Decoupled via /api/alerts & /api/stats)
 
 ---
 
@@ -35,8 +35,8 @@ Dashboard (NOT BUILT)
 - MLClient integration
 - Hybrid threat scoring
 - Full System Validation (Real HTTP pipeline stabilized at 15k bursts)
-- SRE Backend Hardening (OOM Protection, Queue Capping, IP/Event boundaries enforced) stabilized at 15k bursts)
 - SRE Backend Hardening (OOM Protection, Queue Capping, IP/Event boundaries enforced)
+- **Resource-Oriented API Refactor (Headless Decoupling Completed)**
 
 ---
 
@@ -54,13 +54,14 @@ With the backend fully locked down and mathematically trained, focus shifts stri
 
 ## 6. KNOWN RISKS
 - **Redis Centralization**: Node `Map()` arrays inside StateManager are currently bound to the single-thread, which prevents multi-server clustered horizontal scaling.
-- **UI Absent**: Dashboard monitoring and visual administration interface does not exist yet.
+- **UI Aesthetic Debt**: Dashboard monitoring exists but lacks 2026-era premium visual fidelity.
+- **Detection Reasoning**: Missing explicit logic-trace exposure in forensics.
 
 ---
 
 ## 7. NEXT STEPS (STRICT EXECUTION ORDER)
-1. **Dashboard Setup**: Initialize React/Vite development framework and analytics GUI.
-2. **Analytics Sync**: Expose SQLite Alert/Raw Event tables via Collector API logic for frontend rendering.
+1. **API/Logic Cleanup**: Fix the 6-7 identified critical backend & diagnostic issues.
+2. **Visual Overhaul**: Elevate React design to premium 2026-era SIEM standards.
 3. **Redis Architecture**: Convert StateManager Memory Arrays into Redis backend clustering (future optimization).
 
 ---

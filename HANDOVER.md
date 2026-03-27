@@ -51,6 +51,7 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 - ✅ Success reset mechanisms and cooldown protection
 - ✅ FeatureExtractor module with deterministic 12-feature schema
 - ✅ Full Pipeline Validation (Real HTTP via Axios Simulator spanning Frontend API → SQLite)
+- ✅ Resource-Oriented API Architecture: Decoupled backend from UI logic (`/api/alerts`, `/api/stats`)
 
 ### Refactoring Achievements
 - **Phase 1**: Separated responsibilities into 4 distinct modules
@@ -58,6 +59,7 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 - **Phase 3**: Converted rule engine to declarative logic, removed hardcoded thresholds, fixed regex state issues
 - **Phase 4**: Enforced ML constraint (cannot create threats), structured alert evidence
 - **Phase 5**: Added stateful behavioral intelligence with temporal awareness
+- **Phase 6**: **Resource-Oriented Architecture (ROA)** - Refactored UI-coupled `/api/dashboard/*` into generic `/api/alerts` and `/api/stats` for headless integration.
 
 ### Stateful Behavioral Analysis Implementation
 - **Temporal Windowing**: 60-second sliding window for counting recent failures
@@ -149,6 +151,15 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 ### Active Architectural Limitations & Known Blindspots
 - **Distributed Botnet / Sparse Origin DDoS Detection**: The system currently tracks temporal states individually per `ip_address` or `session_id`. If a distributed attack utilizes 10,000 unique IPs sending only 1-2 requests each, the ML Model evaluates them individually as `LOW` confidence benign traffic. Global traffic correlation is currently not implemented due to single-instance memory dependencies. 
 
+### 🚨 Critical Pending Refactors (Dashboard Phase)
+1. **API Naming/Decoupling (FIXED)**: Transitioned from `/api/dashboard` to resource-based paths.
+2. **Detection Reasoning Exposure**: Currently lacking deep "Why" mapping for complex rule chains.
+3. **Forensic Simplification**: `AlertDetails` requires UX/Logic reduction.
+4. **Behavioral Vague-ness**: `Behavior` page metrics lack granular specificity.
+5. **Real-Time Veracity**: Validation required to ensure stream isn't "faking" real-time ingestion.
+6. **Data Visualization Risks**: `Recharts` implementation needs hardening for edge-case datasets.
+7. **Cross-Service Traceability**: Missing unified correlate-ID for end-to-end trace mapping.
+
 ## NEXT STEPS
 
 ### ML Phase (COMPLETED)
@@ -165,14 +176,14 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 4. **Fix ML Temporal Blindness**: Overwrote stateless features with 60-second StateManager HTTP mapping metrics organically. (COMPLETED)
 
 ### Phase 2 Roadmap
-1. **Dashboard Development**: Create visualization React client for detection results parsing the SQLite store.
-2. **Centralize State**: Migrate Memory `Map()` inside `StateManager` into a Redis backplane to handle clustered traffic natively.
+1. **Dashboard Setup**: Initialize React/Vite development framework and analytics GUI. (IN PROGRESS)
+2. **Analytics Sync**: Expose SQLite Alert/Raw Event tables via Resource-Oriented API. (COMPLETED)
+3. **Redis Architecture**: Convert StateManager Memory Arrays into Redis backend clustering (future optimization).
 
 ### Long-term Enhancements
 1. **Advanced ML Models**: Implement additional anomaly detection algorithms
 2. **Scalability**: Add support for distributed deployment
 3. **Real-time Analytics**: Enhance real-time threat analysis capabilities
-4. **API Endpoints**: Add management APIs for rules, alerts, and system configuration
 
 ## TECHNICAL SPECIFICATIONS
 
