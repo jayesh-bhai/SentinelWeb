@@ -1,6 +1,8 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import { DetectionEngine } from './detection-engine/index.js';
+import { createAlertsRouter } from './routes/alerts.js';
+import { createStatsRouter } from './routes/stats.js';
 import { z } from 'zod';
 
 const app = express();
@@ -67,6 +69,14 @@ app.use((req, res, next) => {
 
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+
+// Mount Resource-Oriented API Routers
+app.use('/api/alerts', createAlertsRouter(detectionEngine.persistence.db));
+app.use('/api/stats', createStatsRouter(detectionEngine.persistence.db, {
+  get uptime() { return formatDuration(Date.now() - stats.startTime); },
+  get total_requests() { return stats.requests.total; },
+  get active_agents() { return stats.agents.frontend.size + stats.agents.backend.size; }
+}));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -435,39 +445,6 @@ app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) 
   });
 });
 
-// Statistics endpoint
-app.get('/api/stats', (req, res) => {
-  const uptime = Date.now() - stats.startTime;
-  res.status(200).json({
-    collector: {
-      uptime: formatDuration(uptime),
-      startTime: new Date(stats.startTime).toISOString()
-    },
-    requests: {
-      total: stats.requests.total,
-      frontend: {
-        count: stats.requests.frontend.count,
-        lastReceived: stats.requests.frontend.lastReceived,
-        activeAgents: stats.agents.frontend.size
-      },
-      backend: {
-        count: stats.requests.backend.count,
-        lastReceived: stats.requests.backend.lastReceived,
-        activeAgents: stats.agents.backend.size
-      }
-    },
-    agents: {
-      frontend: {
-        total: stats.agents.frontend.size,
-        sessions: Array.from(stats.agents.frontend)
-      },
-      backend: {
-        total: stats.agents.backend.size,
-        servers: Array.from(stats.agents.backend)
-      }
-    }
-  });
-});
 
 // 404 handler
 app.use((req, res) => {

@@ -50,14 +50,18 @@ def predict(request: PredictionRequest):
         X_scaled = scaler.transform(X)
 
         # Execute Isolation Forest evaluation
-        # decision_function: The lower, the more abnormal. Negative is usually anomaly.
-        score = model.decision_function(X_scaled)[0]
+        # decision_function: The lower, the more abnormal. Typically [-0.5, 0.5]
+        raw_score = model.decision_function(X_scaled)[0]
+        
+        # Normalize to 0..1 anomaly probability where 1 is anomaly
+        # score ≈ 0.5 (normal) -> 0.0, score ≈ -0.5 (anomaly) -> 1.0
+        normalized_score = np.clip(0.5 - raw_score, 0, 1)
         
         # predict: Returns -1 for outliers and 1 for inliers.
         pred = model.predict(X_scaled)[0]
 
         return {
-            "anomaly_score": float(score),
+            "anomaly_score": float(normalized_score),
             "is_anomaly": bool(pred == -1)
         }
     except Exception as e:

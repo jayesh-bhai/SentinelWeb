@@ -116,6 +116,7 @@ export class DetectionEngine {
       confidence: threatAssessment.confidence,
       explanation: threatAssessment.explanation,
       rule_hits: JSON.stringify(ruleHits), // Store structured rule evidence
+      detection_logic: threatAssessment.detection_logic, // Store mathematical fusion metadata
       offending_payload: this.extractOffendingPayload(ruleHits),
       matched_location: this.extractMatchedLocation(ruleHits),
       timestamp: new Date().toISOString()

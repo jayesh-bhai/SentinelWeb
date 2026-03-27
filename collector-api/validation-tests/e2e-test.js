@@ -1,4 +1,4 @@
-import { DetectionEngine } from './detection-engine/index.js';
+import { DetectionEngine } from '../detection-engine/index.js';
 
 async function runTest() {
   console.log('🧪 Starting End-to-End Hybrid Pipeline Test...\n');

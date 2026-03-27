@@ -30,7 +30,7 @@ export class MLClient {
       console.error("ML service unavailable:", err.message);
 
       return {
-        anomaly_score: 0,
+        anomaly_score: 0.5,
         is_anomaly: false
       };
     }

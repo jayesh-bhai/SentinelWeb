@@ -3,7 +3,7 @@
  * Tests the Detection Engine with 6 canonical events
  */
 
-import { DetectionEngine } from './index.js';
+import { DetectionEngine } from '../index.js';
 
 async function runValidationTests() {
   console.log('🛡️ Starting Adversarial Validation Tests...\n');
@@ -44,7 +44,7 @@ async function runValidationTests() {
         "successful_auth_attempts": 0
       }
     },
-     E3: {
+    E3: {
       "event_type": "api_usage",
       "source": "backend",
       "timestamp": 1710000200000,
@@ -96,17 +96,17 @@ async function runValidationTests() {
 
   // Test each event individually
   const eventIds = ['E1', 'E2', 'E3', 'E4', 'E5', 'E6'];
-  
+
   for (const eventId of eventIds) {
     const event = testEvents[eventId];
     if (!event) {
       console.log(`\n❌ MISSING EVENT ${eventId}`);
       continue;
     }
-    
+
     console.log(`\n🔬 TESTING EVENT ${eventId}`);
     console.log(`=========================================`);
-    
+
     // Special debugging for E2
     if (eventId === 'E2') {
       console.log('🔍 SPECIAL DEBUG FOR E2:');
@@ -148,11 +148,11 @@ async function runValidationTests() {
       console.log('\nD. Persistence Stage:');
       // Check if alert was stored
       const alerts = await detectionEngine.getAlerts(5);
-      const eventAlert = alerts.find(alert => 
-        alert.session_id === event.session_id || 
+      const eventAlert = alerts.find(alert =>
+        alert.session_id === event.session_id ||
         (event.session_id && alert.session_id.includes(event.session_id.replace('sess_', '').split('_')[0]))
       );
-      
+
       if (result.is_threat) {
         if (eventAlert) {
           console.log('   - Alert stored in database ✓');
@@ -168,8 +168,8 @@ async function runValidationTests() {
       console.log('\n📋 SUMMARY FOR EVENT ' + eventId + ':');
       console.log(`   - Input: ${eventId} (${['E1', 'E2', 'E3'].includes(eventId) ? 'malicious' : 'benign'})`);
       console.log(`   - Threat Detected: ${result.is_threat}`);
-      console.log(`   - Result: ${result.is_threat ? (['E1', 'E2', 'E3'].includes(eventId) ? '✅ CORRECT (malicious event flagged)' : '❌ INCORRECT (false positive)') : 
-                                (['E1', 'E2', 'E3'].includes(eventId) ? '❌ INCORRECT (missed threat)' : '✅ CORRECT (benign event passed)')}`);
+      console.log(`   - Result: ${result.is_threat ? (['E1', 'E2', 'E3'].includes(eventId) ? '✅ CORRECT (malicious event flagged)' : '❌ INCORRECT (false positive)') :
+        (['E1', 'E2', 'E3'].includes(eventId) ? '❌ INCORRECT (missed threat)' : '✅ CORRECT (benign event passed)')}`);
 
     } catch (error) {
       console.log(`\n❌ ERROR PROCESSING EVENT ${eventId}:`, error.message);

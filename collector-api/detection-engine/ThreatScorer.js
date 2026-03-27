@@ -15,71 +15,82 @@ export class ThreatScorer {
    * @param {Object} event - Normalized event object
    * @param {Array} features - Pre-extracted features for ML model
    * @param {Object} mlResult - The result from ML Inference service { anomaly_score, is_anomaly }
-   * @returns {Object} Threat assessment object
+   * @returns {Object} Threat assessment object including detection_logic
    */
   async runThreatScoring(ruleHits, event, features, mlResult) {
-  
-    // Check severity triggers
-    const hasHighRule = ruleHits.some(r => r.severity === "HIGH");
-    const hasMediumRule = ruleHits.some(r => r.severity === "MEDIUM");
-
-    // Rule 1: High severity overrides everything. ML is ignored for decision making
-    if (hasHighRule) {
-      return {
-        is_threat: true,
-        threat_type: ruleHits.find(r => r.severity === "HIGH").rule_id,
-        severity: "HIGH",
-        confidence: "HIGH",
-        explanation: "High severity rule triggered" + (mlResult.is_anomaly ? " (Confirmed by ML behavior)" : ""),
-        rule_hits_count: ruleHits.length
-      };
-    }
-
-    // Rule 2: Medium severity escalates to High if ML also sees anomalous behavior
-    if (hasMediumRule && mlResult.is_anomaly) {
-      return {
-        is_threat: true,
-        threat_type: ruleHits.find(r => r.severity === "MEDIUM").rule_id,
-        severity: "HIGH",
-        confidence: "MEDIUM",
-        explanation: "Rule trigger supported by ML anomaly",
-        rule_hits_count: ruleHits.length
-      };
-    }
+    // 1. Calculate Rule Base Score
+    let baseScore = 0.0;
+    let maxRuleSeverity = "LOW";
     
-    // Fallback: Medium severity alone stays Medium
-    if (hasMediumRule) {
-      return {
-        is_threat: true,
-        threat_type: ruleHits.find(r => r.severity === "MEDIUM").rule_id,
-        severity: "MEDIUM",
-        confidence: "LOW",
-        explanation: "Medium severity rule triggered independently",
-        rule_hits_count: ruleHits.length
-      };
+    if (ruleHits.length > 0) {
+      if (ruleHits.some(r => r.severity === "CRITICAL")) {
+        baseScore = 0.98;
+        maxRuleSeverity = "CRITICAL";
+      } else if (ruleHits.some(r => r.severity === "HIGH")) {
+        baseScore = 0.90;
+        maxRuleSeverity = "HIGH";
+      } else if (ruleHits.some(r => r.severity === "MEDIUM")) {
+        baseScore = 0.65;
+        maxRuleSeverity = "MEDIUM";
+      } else {
+        baseScore = 0.40;
+        maxRuleSeverity = "LOW";
+      }
     }
 
-    // Rule 3: No rules hit, but ML flagged behavior as anomalous 
-    // It creates a LOW severity observational anomaly but DOES NOT issue a hard threat
-    if (!ruleHits.length && mlResult.is_anomaly) {
-      return {
-        is_threat: false,
-        threat_type: "BEHAVIORAL_ANOMALY",
-        severity: "LOW",
-        confidence: "LOW",
-        explanation: "Behavioral anomaly detected by ML",
-        rule_hits_count: 0
-      };
-    }
+    // 2. Calculate ML Adjustment (Contribution)
+    // Reduce the weight of ML adjustment to +/- 0.15 to prevent it from single-handedly killing a HIGH rule
+    const anomalyScore = parseFloat(mlResult.anomaly_score || 0.5);
+    const mlAdjustment = (anomalyScore - 0.5) * 0.3; // 0.5 -> 0, 0.9 -> +0.12, 0.1 -> -0.12
+    
+    // 3. Fusion Logic
+    let finalConfidence = Math.min(1.0, Math.max(0, baseScore + mlAdjustment));
+    
+    // 4. Decision Logic
+    const THREAT_THRESHOLD = 0.60;
+    const SUSPICIOUS_THRESHOLD = 0.25;
+    
+    let verdict = "SAFE";
+    if (finalConfidence >= THREAT_THRESHOLD) verdict = "THREAT";
+    else if (finalConfidence >= SUSPICIOUS_THRESHOLD) verdict = "SUSPICIOUS";
 
-    // Rule 4: No hits anywhere
+    // 5. Generate Reasoning Summary
+    const mlImpact = mlAdjustment >= 0 ? `increased by ${mlAdjustment.toFixed(2)}` : `decreased by ${Math.abs(mlAdjustment).toFixed(2)}`;
+    const reasoning = ruleHits.length > 0 
+      ? `Base score ${baseScore.toFixed(2)} (${maxRuleSeverity} rule) ${mlImpact} due to behavior analysis.`
+      : `No rules hit. Behavioral anomaly score ${anomalyScore.toFixed(2)} resulted in aggregate confidence ${finalConfidence.toFixed(2)}.`;
+
+    // 6. Structured Detection Logic (Explainable UI/API)
+    const detectionLogic = {
+      summary: reasoning,
+      engine_outputs: {
+        rule_engine: {
+          hits: ruleHits.map(r => r.rule_id),
+          max_severity: maxRuleSeverity,
+          base_score: baseScore
+        },
+        ml_component: {
+          anomaly_score: anomalyScore,
+          classification: mlResult.is_anomaly ? "ANOMALY" : "NORMAL",
+          contribution: (mlAdjustment >= 0 ? "+" : "") + mlAdjustment.toFixed(2)
+        }
+      },
+      fusion_logic: {
+        formula: "min(1.0, max(0, BaseScore + (AnomalyScore - 0.5) * 0.4))",
+        final_confidence: parseFloat(finalConfidence.toFixed(2)),
+        decision_threshold: THREAT_THRESHOLD
+      },
+      verdict: verdict
+    };
+
     return {
-      is_threat: false,
-      threat_type: "NONE",
-      severity: "LOW",
-      confidence: "LOW",
-      explanation: "No threat detected",
-      rule_hits_count: ruleHits.length
+      is_threat: verdict === "THREAT",
+      threat_type: ruleHits.length > 0 ? ruleHits[0].rule_id : (verdict === "SUSPICIOUS" ? "BEHAVIORAL_ANOMALY" : "NONE"),
+      severity: verdict === "THREAT" ? maxRuleSeverity : (verdict === "SUSPICIOUS" ? "LOW" : "NONE"),
+      confidence: finalConfidence.toFixed(2),
+      explanation: reasoning,
+      rule_hits_count: ruleHits.length,
+      detection_logic: detectionLogic // New Structured Payload
     };
   }
 

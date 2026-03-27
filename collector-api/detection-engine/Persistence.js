@@ -56,10 +56,14 @@ export class Persistence {
         confidence TEXT,
         explanation TEXT,
         rule_hits TEXT,
+        detection_logic TEXT,
         offending_payload TEXT,
         matched_location TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
+      );
+      CREATE INDEX IF NOT EXISTS idx_alerts_timestamp ON alerts(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_alerts_session ON alerts(session_id);
+      CREATE INDEX IF NOT EXISTS idx_events_session ON raw_events(session_id);
     `);
 
     console.log('💾 Detection Engine database tables created');
@@ -147,8 +151,8 @@ export class Persistence {
       try {
         await this.db.run('BEGIN TRANSACTION');
         const stmt = await this.db.prepare(
-          `INSERT INTO alerts (session_id, server_id, threat_type, severity, confidence, explanation, rule_hits, offending_payload, matched_location) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO alerts (session_id, server_id, threat_type, severity, confidence, explanation, rule_hits, detection_logic, offending_payload, matched_location) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         );
         for (const alertData of alertsToProcess) {
           await stmt.run([
@@ -159,6 +163,7 @@ export class Persistence {
             alertData.confidence,
             alertData.explanation,
             alertData.rule_hits,
+            JSON.stringify(alertData.detection_logic),
             alertData.offending_payload.substring(0, 100),
             alertData.matched_location
           ]);
