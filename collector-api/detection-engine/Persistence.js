@@ -38,6 +38,7 @@ export class Persistence {
     await this.db.exec(`
       CREATE TABLE IF NOT EXISTS raw_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ip TEXT,
         session_id TEXT,
         server_id TEXT,
         event_type TEXT,
@@ -49,6 +50,7 @@ export class Persistence {
     await this.db.exec(`
       CREATE TABLE IF NOT EXISTS alerts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ip TEXT,
         session_id TEXT,
         server_id TEXT,
         threat_type TEXT,
@@ -123,11 +125,12 @@ export class Persistence {
       try {
         await this.db.run('BEGIN TRANSACTION');
         const stmt = await this.db.prepare(
-          `INSERT INTO raw_events (session_id, server_id, event_type, event_data) 
-           VALUES (?, ?, ?, ?)`
+          `INSERT INTO raw_events (ip, session_id, server_id, event_type, event_data) 
+           VALUES (?, ?, ?, ?, ?)`
         );
         for (const rawEvent of eventsToProcess) {
           await stmt.run([
+            rawEvent.ip_address || rawEvent.actor?.ip || 'unknown',
             rawEvent.sessionId || rawEvent.session_id || 'unknown',
             rawEvent.serverId || rawEvent.server_id || 'unknown',
             rawEvent.event_type || 'unknown',
@@ -151,11 +154,12 @@ export class Persistence {
       try {
         await this.db.run('BEGIN TRANSACTION');
         const stmt = await this.db.prepare(
-          `INSERT INTO alerts (session_id, server_id, threat_type, severity, confidence, explanation, rule_hits, detection_logic, offending_payload, matched_location) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO alerts (ip, session_id, server_id, threat_type, severity, confidence, explanation, rule_hits, detection_logic, offending_payload, matched_location) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         );
         for (const alertData of alertsToProcess) {
           await stmt.run([
+            alertData.ip,
             alertData.session_id,
             alertData.server_id,
             alertData.threat_type,

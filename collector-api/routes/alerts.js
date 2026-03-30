@@ -14,7 +14,8 @@ export function createAlertsRouter(db) {
       let query = `
         SELECT a.id, a.timestamp, a.session_id as ip, a.threat_type, a.severity, a.confidence, 
                CASE WHEN CAST(a.confidence AS REAL) > 0.0 THEN 'HYBRID' ELSE 'RULE' END as source, 
-               a.matched_location as path
+               a.matched_location as path,
+               a.detection_logic
         FROM alerts a
       `;
       let params = [];
@@ -29,6 +30,27 @@ export function createAlertsRouter(db) {
 
       const alerts = await db.all(query, params);
       
+      const enrichedAlerts = alerts.map(a => {
+        let logic = null;
+        try {
+          if (a.detection_logic) logic = JSON.parse(a.detection_logic);
+        } catch(e) {}
+
+        return {
+          id: a.id,
+          timestamp: a.timestamp,
+          ip: a.ip,
+          path: a.path,
+          severity: a.severity,
+          detection: {
+            type: a.threat_type,
+            confidence: parseFloat(a.confidence || 0),
+            source: a.source,
+            reasoning: logic ? logic.ml_component?.classification || logic.verdict : 'Direct pattern match.'
+          }
+        };
+      });
+      
       let countQuery = `SELECT COUNT(*) as total FROM alerts`;
       let countParams = [];
       if (severity) {
@@ -39,7 +61,7 @@ export function createAlertsRouter(db) {
       
       res.json({
         status: 'success',
-        data: alerts,
+        data: enrichedAlerts,
         pagination: { 
           total, 
           page, 

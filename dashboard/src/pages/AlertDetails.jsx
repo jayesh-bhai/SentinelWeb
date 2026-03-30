@@ -3,10 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { format } from 'date-fns';
 import { ShieldAlert, ArrowLeft, Target, Fingerprint, Activity, Code, HardDrive, BrainCircuit } from 'lucide-react';
+import { useSession } from '../contexts/SessionContext';
 
 export default function AlertDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { updateSession } = useSession();
   const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -14,7 +16,12 @@ export default function AlertDetails() {
     const fetchDetails = async () => {
       try {
         const res = await apiClient.get(`/alerts/${id}`);
-        setAlert(res.data.data);
+        const data = res.data.data;
+        setAlert(data);
+        // Sync this session back to correctly link the behavior analytics
+        if (data.context?.ip) {
+          updateSession(data.context.ip);
+        }
       } catch (err) {
         console.error("Failed to fetch alert details", err);
       } finally {
@@ -22,7 +29,7 @@ export default function AlertDetails() {
       }
     };
     fetchDetails();
-  }, [id]);
+  }, [id, updateSession]);
 
   if (loading || !alert) {
     return (

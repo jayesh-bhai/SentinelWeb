@@ -109,6 +109,7 @@ export class DetectionEngine {
   async generateAlert(threatAssessment, normalizedEvent, ruleHits) {
     // Create alert record with structured information
     const alertData = {
+      ip: normalizedEvent.actor.ip || 'unknown',
       session_id: normalizedEvent.actor.session_id,
       server_id: normalizedEvent.actor.server_id || 'unknown',
       threat_type: threatAssessment.threat_type,

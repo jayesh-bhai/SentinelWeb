@@ -1,11 +1,15 @@
 import express from 'express';
 import bodyParser from 'body-parser';
+import cors from 'cors';
 import { DetectionEngine } from './detection-engine/index.js';
 import { createAlertsRouter } from './routes/alerts.js';
 import { createStatsRouter } from './routes/stats.js';
 import { z } from 'zod';
+import { createBehaviorsRouter } from './routes/behaviors.js';
+import { createActiveThreatsRouter } from './routes/active_threats.js';
 
 const app = express();
+app.use(cors());
 
 // Initialize the detection engine
 const detectionEngine = new DetectionEngine();
@@ -59,7 +63,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  
+
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
   } else {
@@ -77,12 +81,14 @@ app.use('/api/stats', createStatsRouter(detectionEngine.persistence.db, {
   get total_requests() { return stats.requests.total; },
   get active_agents() { return stats.agents.frontend.size + stats.agents.backend.size; }
 }));
+app.use('/api/behaviors', createBehaviorsRouter(detectionEngine.stateManager));
+app.use('/api/active-threats', createActiveThreatsRouter(detectionEngine.persistence.db, detectionEngine.stateManager));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   const uptime = Date.now() - stats.startTime;
-  res.status(200).json({ 
-    status: 'ok', 
+  res.status(200).json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: formatDuration(uptime),
     stats: {
@@ -124,11 +130,11 @@ const validatePayload = (schema) => (req, res, next) => {
 
 function sanitizeEventType(input) {
   const allowed = new Set([
-    'login_attempt', 
-    'http_request', 
-    'api_call', 
-    'auth_summary', 
-    'user_activity', 
+    'login_attempt',
+    'http_request',
+    'api_call',
+    'auth_summary',
+    'user_activity',
     'api_usage'
   ]);
   return allowed.has(input) ? input : 'GENERIC_EVENT';
@@ -150,7 +156,7 @@ app.post("/api/collect/frontend", validatePayload(eventSchema), async (req, res)
   if (req.body.sessionId) {
     stats.agents.frontend.add(req.body.sessionId);
   }
-  
+
   // Process the event through the detection engine
   try {
     const realIp = normalizeIp(req.socket.remoteAddress);
@@ -158,13 +164,13 @@ app.post("/api/collect/frontend", validatePayload(eventSchema), async (req, res)
       ...req.body,
       ip_address: realIp
     };
-    
+
     const threatAssessment = await detectionEngine.processEvent({
       ...enrichedEvent,
       event_type: sanitizeEventType(req.body.event_type),
       source: req.body.source || 'frontend_agent'
     });
-    
+
     // Log threat assessment if detected
     if (threatAssessment.is_threat) {
       console.log(`🚨 THREAT DETECTED [${threatAssessment.severity.toUpperCase()}]`);
@@ -176,13 +182,13 @@ app.post("/api/collect/frontend", validatePayload(eventSchema), async (req, res)
   } catch (error) {
     console.error('❌ Error processing event through detection engine:', error);
   }
-  
+
   console.log("\n🔍 Frontend Agent Data Received:");
   console.log("📊 Session ID:", req.body.sessionId);
   console.log("🌐 URL:", req.body.url);
   console.log("⏱️  Session Duration:", formatDuration(req.body.sessionDuration));
   console.log("📱 User Agent:", req.body.userAgent?.substring(0, 80) + (req.body.userAgent?.length > 80 ? '...' : ''));
-  
+
   if (req.body.userBehavior) {
     console.log("🖱️  User Behavior:", {
       mouseClicks: req.body.userBehavior.mouseClicks,
@@ -194,7 +200,7 @@ app.post("/api/collect/frontend", validatePayload(eventSchema), async (req, res)
       clickPattern: req.body.userBehavior.clickPattern?.length || 0
     });
   }
-  
+
   if (req.body.securityEvents && Array.isArray(req.body.securityEvents) && req.body.securityEvents.length > 0) {
     console.log("🚨 Security Events:", req.body.securityEvents.length);
     req.body.securityEvents.forEach((event, index) => {
@@ -212,7 +218,7 @@ app.post("/api/collect/frontend", validatePayload(eventSchema), async (req, res)
   } else if (req.body.securityEvents && req.body.securityEvents !== '[REDACTED]') {
     console.log("🚨 Security Events: (sanitized data)");
   }
-  
+
   if (req.body.errorEvents && Array.isArray(req.body.errorEvents) && req.body.errorEvents.length > 0) {
     console.log("❌ Error Events:", req.body.errorEvents.length);
     req.body.errorEvents.forEach((event, index) => {
@@ -222,10 +228,10 @@ app.post("/api/collect/frontend", validatePayload(eventSchema), async (req, res)
       }
     });
   }
-  
+
   if (req.body.networkEvents && Array.isArray(req.body.networkEvents) && req.body.networkEvents.length > 0) {
     console.log("🌐 Network Events:", req.body.networkEvents.length);
-    
+
     // Show slow requests
     const slowRequests = req.body.networkEvents.filter(event => event.responseTime > 1000);
     if (slowRequests.length > 0) {
@@ -234,7 +240,7 @@ app.post("/api/collect/frontend", validatePayload(eventSchema), async (req, res)
         console.log(`    ${index + 1}. ${event.method} ${event.url} - ${event.responseTime}ms`);
       });
     }
-    
+
     // Show failed requests
     const failedRequests = req.body.networkEvents.filter(event => event.status >= 400);
     if (failedRequests.length > 0) {
@@ -244,7 +250,7 @@ app.post("/api/collect/frontend", validatePayload(eventSchema), async (req, res)
       });
     }
   }
-  
+
   if (req.body.performanceMetrics) {
     console.log("⚡ Performance:", {
       memoryUsage: (req.body.performanceMetrics.memoryUsage * 100).toFixed(2) + '%',
@@ -253,7 +259,7 @@ app.post("/api/collect/frontend", validatePayload(eventSchema), async (req, res)
       jsExecutionTime: req.body.performanceMetrics.jsExecutionTime?.toFixed(2) + 'ms'
     });
   }
-  
+
   if (req.body.pageMetrics) {
     console.log("📈 Page Metrics:", {
       loadTime: req.body.pageMetrics.loadTime + 'ms',
@@ -262,11 +268,11 @@ app.post("/api/collect/frontend", validatePayload(eventSchema), async (req, res)
       largestContentfulPaint: req.body.pageMetrics.largestContentfulPaint + 'ms'
     });
   }
-  
+
   console.log("\n" + "=".repeat(60));
-  
-  res.status(200).json({ 
-    status: "success", 
+
+  res.status(200).json({
+    status: "success",
     message: "Frontend data received and processed",
     timestamp: new Date().toISOString(),
     sessionId: req.body.sessionId,
@@ -289,7 +295,7 @@ app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) 
   if (req.body.serverId) {
     stats.agents.backend.add(req.body.serverId);
   }
-  
+
   // Process the event through the detection engine
   try {
     const realIp = normalizeIp(req.socket.remoteAddress);
@@ -303,7 +309,7 @@ app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) 
       event_type: sanitizeEventType(req.body.event_type),
       source: req.body.source || 'backend_agent'
     });
-    
+
     // Log threat assessment if detected
     if (threatAssessment.is_threat) {
       console.log(`🚨 THREAT DETECTED [${threatAssessment.severity.toUpperCase()}]`);
@@ -315,12 +321,12 @@ app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) 
   } catch (error) {
     console.error('❌ Error processing event through detection engine:', error);
   }
-  
+
   console.log("\n🖥️  Backend Agent Data Received:");
   console.log("📊 Session ID:", req.body.sessionId);
   console.log("🖥️  Server ID:", req.body.serverId);
   console.log("⏱️  Timestamp:", new Date(req.body.timestamp).toLocaleString());
-  
+
   if (req.body.serverInfo) {
     console.log("ℹ️  Server Info:", {
       serverName: req.body.serverInfo.serverName,
@@ -329,7 +335,7 @@ app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) 
       region: req.body.serverInfo.region || 'N/A'
     });
   }
-  
+
   if (req.body.authenticationMetrics) {
     const auth = req.body.authenticationMetrics;
     console.log("🔐 Authentication Metrics:", {
@@ -341,7 +347,7 @@ app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) 
       passwordResetRequests: auth.passwordResetRequests,
       newUserRegistrations: auth.newUserRegistrations
     });
-    
+
     // Show recent suspicious logins
     if (auth.suspiciousLogins && auth.suspiciousLogins.length > 0) {
       console.log("🚨 Recent Suspicious Logins:");
@@ -350,7 +356,7 @@ app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) 
       });
     }
   }
-  
+
   if (req.body.apiMetrics) {
     const api = req.body.apiMetrics;
     console.log("📈 API Metrics:", {
@@ -359,13 +365,13 @@ app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) 
       errorRate: api.errorRate?.toFixed(2) + '%',
       rateLimitHits: api.rateLimitHits
     });
-    
+
     // Show top endpoints by request count
     if (api.requestsByEndpoint) {
       const topEndpoints = Object.entries(api.requestsByEndpoint)
-        .sort(([,a], [,b]) => b - a)
+        .sort(([, a], [, b]) => b - a)
         .slice(0, 5);
-      
+
       if (topEndpoints.length > 0) {
         console.log("🔥 Top Endpoints:");
         topEndpoints.forEach(([endpoint, count], index) => {
@@ -373,7 +379,7 @@ app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) 
         });
       }
     }
-    
+
     // Show HTTP status distribution
     if (api.statusCodes) {
       const statusEntries = Object.entries(api.statusCodes);
@@ -382,7 +388,7 @@ app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) 
       }
     }
   }
-  
+
   if (req.body.securityEvents && Array.isArray(req.body.securityEvents) && req.body.securityEvents.length > 0) {
     console.log("🚨 Security Events:", req.body.securityEvents.length);
     req.body.securityEvents.forEach((event, index) => {
@@ -396,7 +402,7 @@ app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) 
   } else if (req.body.securityEvents && req.body.securityEvents !== '[REDACTED]') {
     console.log("🚨 Security Events: (sanitized data)");
   }
-  
+
   if (req.body.errorEvents && Array.isArray(req.body.errorEvents) && req.body.errorEvents.length > 0) {
     console.log("❌ Error Events:", req.body.errorEvents.length);
     req.body.errorEvents.forEach((event, index) => {
@@ -406,31 +412,31 @@ app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) 
       }
     });
   }
-  
+
   if (req.body.performanceMetrics) {
     const perf = req.body.performanceMetrics;
     console.log("⚡ Performance Metrics:");
-    
+
     if (perf.responseTime) {
       console.log(`  📊 Response Times: Avg ${perf.responseTime.average}ms | P95 ${perf.responseTime.p95}ms | P99 ${perf.responseTime.p99}ms`);
     }
-    
+
     if (perf.systemUsage) {
       const memoryPercent = perf.systemUsage.systemUsagePercentage?.toFixed(2) || 'N/A';
       console.log(`  💾 Memory Usage: ${memoryPercent}% | Heap Used: ${formatBytes(perf.systemUsage.heapUsed || 0)}`);
     }
   }
-  
+
   if (req.body.systemMetrics) {
     const system = req.body.systemMetrics;
     const uptimeHours = (system.uptime / (1000 * 60 * 60)).toFixed(2);
     console.log(`⏰ System Uptime: ${uptimeHours} hours`);
   }
-  
+
   console.log("\n" + "=".repeat(60));
-  
-  res.status(200).json({ 
-    status: "success", 
+
+  res.status(200).json({
+    status: "success",
     message: "Backend data received and processed",
     timestamp: new Date().toISOString(),
     sessionId: req.body.sessionId,
@@ -466,6 +472,7 @@ app.listen(PORT, () => {
   console.log(`  📊 Statistics: http://localhost:${PORT}/api/stats`);
   console.log(`  📊 Frontend endpoint: http://localhost:${PORT}/api/collect/frontend`);
   console.log(`  🖥️  Backend endpoint: http://localhost:${PORT}/api/collect/backend`);
+  console.log(`  🔴 Active Threats: http://localhost:${PORT}/api/active-threats`);
   console.log(`\n🔍 Enhanced Features:`);
   console.log(`  ✅ Rich data formatting with color-coded severity levels`);
   console.log(`  ✅ Detailed performance metrics and system usage`);

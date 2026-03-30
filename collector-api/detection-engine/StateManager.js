@@ -15,6 +15,9 @@ export class StateManager {
     this.ipAlerts = new Map();
     this.sessionAlerts = new Map();
     
+    // 🕒 Global Active Timestamp Tracker for Active Threat Engine
+    this.lastSeen = new Map();
+    
     this.windowSeconds = 60;
     this.threshold = 5;
   }
@@ -61,6 +64,7 @@ export class StateManager {
       this.updateSessionActivity(session, now);
     }
     this.cleanupExpiredSessions(now);
+    this.cleanupExpiredIPs(now);
     
     const ipCount = ip ? this.countRecent(this.ipFailures, ip, now) : 0;
     const sessionCount = session ? this.countRecent(this.sessionFailures, session, now) : 0;
@@ -101,6 +105,7 @@ export class StateManager {
     if (!key) return;
     if (!map.has(key)) map.set(key, []);
     map.get(key).push(timestamp);
+    this.lastSeen.set(key, timestamp);
   }
 
   getIpRequestRate(ip, now) {
@@ -211,19 +216,39 @@ export class StateManager {
    * @param {number} now - Current timestamp for cleanup logic
    * @private
    */
-cleanupExpiredSessions(now) {
-  const cutoff = now - this.windowSeconds * 1000;
+  cleanupExpiredSessions(now) {
+    const cutoff = now - this.windowSeconds * 1000;
 
-  if (!this.sessionActivityTimestamps) return;
+    if (!this.sessionActivityTimestamps) return;
 
-  for (const [sessionId, lastActive] of this.sessionActivityTimestamps) {
-    if (lastActive < cutoff) {
-      this.sessionEndpoints.delete(sessionId);
-      this.sessionActivityTimestamps.delete(sessionId);
+    for (const [sessionId, lastActive] of this.sessionActivityTimestamps) {
+      if (lastActive < cutoff) {
+        this.sessionEndpoints.delete(sessionId);
+        this.sessionActivityTimestamps.delete(sessionId);
+      }
     }
   }
-}
   
+  /**
+   * Cleans up expired IPs from all memory maps
+   * This prevents indefinite growth of IP structures (Memory Leaks)
+   * @param {number} now - Current timestamp
+   * @private
+   */
+  cleanupExpiredIPs(now) {
+    // 5 minutes TTL (300000ms)
+    const cutoff = now - 5 * 60 * 1000;
+    
+    for (const [ip, lastActive] of this.lastSeen) {
+      if (lastActive < cutoff) {
+        this.ipRequests.delete(ip);
+        this.ipFailures.delete(ip);
+        this.ipAlerts.delete(ip);
+        this.lastSeen.delete(ip);
+      }
+    }
+  }
+
   /**
    * Updates the activity timestamp for a session
    * @param {string} sessionId - Session ID
