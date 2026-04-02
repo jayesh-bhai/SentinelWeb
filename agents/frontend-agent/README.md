@@ -52,7 +52,6 @@ agent.start();
 ```javascript
 const agent = new SentinelWebFrontend({
   apiEndpoint: 'https://your-api.com/collect/frontend',
-  apiKey: 'your-api-key',
   collectInterval: 10000,
   enabledFeatures: {
     domEvents: true,
@@ -173,7 +172,6 @@ Returns the current session ID.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `apiEndpoint` | string | Required | Backend API endpoint for data collection |
-| `apiKey` | string | undefined | Optional API key for authentication |
 | `collectInterval` | number | 5000 | Data collection interval in milliseconds |
 | `debug` | boolean | false | Enable debug logging |
 | `enabledFeatures` | object | all enabled | Feature toggles for different monitoring types |

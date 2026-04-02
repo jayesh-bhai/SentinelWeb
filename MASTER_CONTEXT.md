@@ -47,6 +47,7 @@ Dashboard (React, Decoupled via /api/alerts & /api/stats)
 ## 4. CURRENT STATUS
 **Maturity Level**: Production-Ready Full-Stack Security System (SIEM).
 The core Detection Engine, ML Integration, and Pipeline Validation are complete. The Frontend Dashboard has been completely overhauled to meet premium 2026-era SIEM standards. Critical detection reasoning (Explainable AI) and stateful Behavior Analytics are fully integrated and synced via a robust Context API layer, providing true evaluator-ready forensics.
+Recently, the entire system was strictly audited and refactored into a **Single-Tenant Demo System**. All multi-tenancy logic, API key configurations, and user isolation handling were permanently removed from the SDKs (Frontend & Backend Agents) and APIs to ensure a streamlined demonstration.
 
 ---
 

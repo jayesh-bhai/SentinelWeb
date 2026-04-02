@@ -86,7 +86,6 @@ app.listen(3000, () => {
 ```javascript
 const sentinelAgent = new SentinelWebBackend({
   apiEndpoint: 'https://your-api.com/collect/backend',
-  apiKey: 'your-api-key',
   collectInterval: 30000, // 30 seconds
   enabledFeatures: {
     authenticationMonitoring: true,
@@ -225,7 +224,6 @@ Records failed authentication attempt with reason.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `apiEndpoint` | string | Required | Backend API endpoint for data collection |
-| `apiKey` | string | undefined | Optional API key for authentication |
 | `collectInterval` | number | 30000 | Data collection interval in milliseconds |
 | `debug` | boolean | false | Enable debug logging |
 | `enabledFeatures` | object | all enabled | Feature toggles for different monitoring types |

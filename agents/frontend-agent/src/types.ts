@@ -2,7 +2,6 @@
 
 export interface SentinelConfig {
   apiEndpoint: string;
-  apiKey?: string;
   collectInterval: number;
   enabledFeatures: EnabledFeatures;
   privacy: PrivacyConfig;

@@ -2,7 +2,6 @@
 
 export interface BackendConfig {
   apiEndpoint: string;
-  apiKey?: string;
   collectInterval: number;
   enabledFeatures: BackendEnabledFeatures;
   security: SecurityConfig;

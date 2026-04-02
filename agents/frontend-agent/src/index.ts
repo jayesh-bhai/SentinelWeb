@@ -225,10 +225,6 @@ export class SentinelWebFrontend {
         'Content-Type': 'application/json'
       };
 
-      if (configData.apiKey) {
-        headers['Authorization'] = `Bearer ${configData.apiKey}`;
-      }
-
       const response = await fetch(configData.apiEndpoint, {
         method: 'POST',
         headers,

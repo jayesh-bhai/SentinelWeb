@@ -351,8 +351,7 @@ export class SentinelWebBackend {
       const response = await fetch(configData.apiEndpoint, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          ...(configData.apiKey && { 'Authorization': `Bearer ${configData.apiKey}` })
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(metrics)
       });

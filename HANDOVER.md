@@ -187,9 +187,10 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 
 ### Phase 3 Roadmap (Demonstration & Productization) [CURRENT FOCUS]
 1. **Dashboard Polish**: Finalize all edge-case UI interactions so mitigation data is front-and-center for developers.
-2. **NPM Agent Packaging**: Extract the raw tracking agents into installable NPM packages (e.g., `@sentinelweb/express-agent`).
+2. **NPM Agent Packaging**: Extract the raw tracking agents into installable NPM packages (e.g., `@sentinelweb/express-agent`) with a strict single-tenant configuration.
 3. **Sandbox Application**: Create a lightweight, mock vulnerable web-app that natively installs the NPM packages.
-4. **Live Attack Scenarios**: Execute 4-5 strictly orchestrated attack profiles (SQLi, Credential Stuffing, Rate Abuse, ML Anomalies) against the Sandbox to prove real-time SIEM visibility.
+4. **Single-Tenant Refactor**: Completely remove all multi-tenancy, authentication headers, API keys, and user isolation code to streamline the demo architecture. (COMPLETED)
+5. **Live Attack Scenarios**: Execute 4-5 strictly orchestrated attack profiles (SQLi, Credential Stuffing, Rate Abuse, ML Anomalies) against the Sandbox to prove real-time SIEM visibility.
 
 ### Long-term Enhancements
 1. **Advanced ML Models**: Implement additional anomaly detection algorithms
@@ -236,6 +237,6 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 - Minimal overhead for agent instrumentation
 
 ---
-**Last Updated**: March 31, 2026
-**Status**: Core SIEM pipeline complete. Approaching final productization phase.
-**Handover State**: Both Backend scaling mechanisms and Frontend visualization layers are finalized. The system is transitioning out of architectural development into **Demonstration Phase**: building NPM packages, a dummy Sandbox Application, and live adversarial playbooks.
+**Last Updated**: April 2, 2026
+**Status**: Core SIEM pipeline complete and scaled down to a strictly clean Single-Tenant architecture. Approaching final productization phase.
+**Handover State**: Both Backend scaling mechanisms and Frontend visualization layers are finalized. The system is transitioning out of architectural development into **Demonstration Phase**: building NPM packages, a dummy Sandbox Application, and live adversarial playbooks. Multi-tenancy logic and API Key layers have been permanently removed.
