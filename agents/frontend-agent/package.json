@@ -17,10 +17,18 @@
     "monitoring",
     "frontend",
     "analytics",
-    "tracking"
+    "siem"
   ],
-  "author": "SentinelWeb Team",
+  "author": "Jayesh",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jayesh-bhai/SentinelWeb.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jayesh-bhai/SentinelWeb/issues"
+  },
+  "homepage": "https://github.com/jayesh-bhai/SentinelWeb/tree/main/agents/frontend-agent#readme",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^25.0.0",
     "@rollup/plugin-node-resolve": "^15.0.0",
