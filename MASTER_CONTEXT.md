@@ -1,7 +1,9 @@
 # PROJECT: SentinelWeb
 
 ## 1. OBJECTIVE
-AI-powered web security system for detecting attacks (SQLi, XSS, brute force, rate abuse) using hybrid rule-based + ML detection.
+AI-powered web security system for detecting attacks (SQLi, XSS, brute force, rate abuse) using hybrid rule-based + ML detection. 
+
+**Vision & End-Goal**: Evolve from a standalone API into a **pluggable Security Intelligence System**. The primary tracking agents (Frontend & Backend) will be published as standard NPM packages, allowing any developer to instantly protect their web application. The final presentation will showcase a dummy "Sandbox Application", integrating these agents, and explicitly detecting/preventing 4-5 orchestrated live cyber attacks.
 
 ---
 
@@ -49,8 +51,8 @@ The core Detection Engine, ML Integration, and Pipeline Validation are complete.
 ---
 
 ## 5. CURRENT TASK (CRITICAL)
-**Phase 3: Polish & Advanced Scaling**
-With both backend and frontend locked down, the focus shifts to premium visual polish (micro-animations, deep UI/UX refinement), resolving edge-case data rendering, and establishing unified cross-service tracing (Correlation IDs).
+**Phase 3: Productization & Demonstration Sandbox**
+With both backend and frontend locked down, the focus shifts entirely to end-to-end user demonstration. We must package the JS agents for NPM distribution, build a dummy "Sandbox Application" to act as a live victim, and refine the React dashboard UI to ensure it clearly tracks and mitigates 4-5 specific real-time attack profiles (SQLi, Brute Force, Rate Abuse, etc).
 
 ---
 
@@ -61,9 +63,10 @@ With both backend and frontend locked down, the focus shifts to premium visual p
 ---
 
 ## 7. NEXT STEPS (STRICT EXECUTION ORDER)
-1. **Correlation IDs**: Implement unified UUID tracing from Frontend Agent → Collector → Detection Engine → MongoDB/SQLite.
-2. **Visual Polish**: Finalize edge-case UI rendering and micro-animations for peak aesthetic fidelity.
-3. **Redis Architecture**: Convert StateManager Memory Arrays into Redis backend clustering (future optimization).
+1. **Frontend Polish**: Ensure the current React Dashboard handles rendering of complex payloads and edge-cases perfectly before the final demo.
+2. **Agent Packaging**: Refactor and prepare the frontend and backend collecting agents as distributable NPM packages.
+3. **Sandbox Creation**: Develop a minimal, vulnerable dummy web application to install the NPM packages into.
+4. **Attack Orchestration**: Write the payload scripts to execute 4-5 distinct attacks against the sandbox to prove live dashboard tracking.
 
 ---
 

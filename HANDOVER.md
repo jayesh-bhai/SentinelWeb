@@ -183,7 +183,13 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 1. **Dashboard Setup**: Initialize React/Vite development framework and analytics GUI. (COMPLETED)
 2. **Analytics Sync**: Expose SQLite Alert/Raw Event tables via Resource-Oriented API. (COMPLETED)
 3. **Evaluator-Ready Integrations**: Implement live-streams, explainability logic, and behavior tracking. (COMPLETED)
-4. **Redis Architecture**: Convert StateManager Memory Arrays into Redis backend clustering (future optimization).
+4. **Active Threat Engine**: Track real-time memory states for active TCP sessions. (COMPLETED)
+
+### Phase 3 Roadmap (Demonstration & Productization) [CURRENT FOCUS]
+1. **Dashboard Polish**: Finalize all edge-case UI interactions so mitigation data is front-and-center for developers.
+2. **NPM Agent Packaging**: Extract the raw tracking agents into installable NPM packages (e.g., `@sentinelweb/express-agent`).
+3. **Sandbox Application**: Create a lightweight, mock vulnerable web-app that natively installs the NPM packages.
+4. **Live Attack Scenarios**: Execute 4-5 strictly orchestrated attack profiles (SQLi, Credential Stuffing, Rate Abuse, ML Anomalies) against the Sandbox to prove real-time SIEM visibility.
 
 ### Long-term Enhancements
 1. **Advanced ML Models**: Implement additional anomaly detection algorithms
@@ -230,6 +236,6 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 - Minimal overhead for agent instrumentation
 
 ---
-**Last Updated**: March 30, 2026
-**Status**: SentinelWeb is a fully integrated, Production-Ready Full-Stack System (SIEM)
-**Handover State**: Both Backend scaling mechanisms and Frontend visualization layers are finalized. Ready for aesthetic perfection, demo-routing preparation, and future distributed clustering (Redis).
+**Last Updated**: March 31, 2026
+**Status**: Core SIEM pipeline complete. Approaching final productization phase.
+**Handover State**: Both Backend scaling mechanisms and Frontend visualization layers are finalized. The system is transitioning out of architectural development into **Demonstration Phase**: building NPM packages, a dummy Sandbox Application, and live adversarial playbooks.

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { apiClient } from '../api/client';
-import { Activity, ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Zap } from 'lucide-react';
+import ActiveAttackerPanel from '../components/panels/ActiveAttackerPanel';
 
 export default function LiveFeed() {
   const [alerts, setAlerts] = useState([]);
@@ -17,7 +18,7 @@ export default function LiveFeed() {
 
   const fetchAlerts = async () => {
     try {
-      const res = await apiClient.get('/alerts?limit=100');
+      const res = await apiClient.get('/alerts?limit=50');
       setAlerts(res.data.data);
     } catch (err) {
       console.error("Failed to fetch alerts", err);
@@ -28,88 +29,112 @@ export default function LiveFeed() {
 
   const getSeverityStyle = (severity) => {
     switch(severity) {
-      case 'CRITICAL': return 'text-purple-400 bg-purple-900/20 border-purple-800';
+      case 'CRITICAL': return 'text-purple-400 bg-purple-900/20 border-purple-800 animate-pulse';
       case 'HIGH': return 'text-red-400 bg-red-900/20 border-red-800';
       case 'MEDIUM': return 'text-orange-400 bg-orange-900/20 border-orange-800';
       default: return 'text-blue-400 bg-blue-900/20 border-blue-800';
     }
   };
 
+  const simplifyReason = (reason, type) => {
+    if (type === 'SQL_INJECTION') return 'SQL Pattern Detected';
+    if (type === 'BRUTE_FORCE_STATEFUL') return 'Multiple failed logins';
+    if (type === 'RATE_LIMIT_ABUSE') return 'Request burst detected';
+    if (type === 'XSS_ATTACK') return 'Cross-site payload injected';
+    if (reason && (reason.includes("ML") || reason.includes("anomaly"))) return "Behavioral Anomaly Blocked";
+    return 'Malicious payload intercepted';
+  };
+
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Activity className="text-red-500" /> Live Threat Stream
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">Live threat polling from SentinelWeb Core Engine</p>
+    <div className="h-full flex gap-8 py-2">
+      {/* 70% Log Stream */}
+      <div className="flex-[2] flex flex-col h-full border border-slate-800/50 rounded-xl bg-slate-900/20 shadow-2xl p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+              <h1 className="text-2xl font-black tracking-tighter uppercase flex items-center gap-3 opacity-90">
+                <Zap className="text-blue-500 fill-blue-500/20" size={28} /> Defense Grid
+              </h1>
+              <p className="text-slate-500 text-xs font-mono mt-1 tracking-widest">REAL-TIME TRAFFIC INSPECTION</p>
+          </div>
+          <div className="flex items-center gap-2 text-slate-500 text-xs font-mono font-bold tracking-widest bg-black px-4 py-2 rounded-lg border border-slate-800">
+             <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></div> FEED (2s)
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-emerald-400 text-sm font-mono bg-emerald-900/20 px-3 py-1 rounded border border-emerald-800">
-          <span className="relative flex h-2 w-2 mr-1">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-          </span>
-          LIVE POLLING (2s)
+
+        <div className="flex-1 bg-black rounded-lg border border-slate-800 overflow-hidden font-mono flex flex-col">
+          <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/50 flex text-slate-500 text-[10px] tracking-widest uppercase font-bold sticky top-0 z-10">
+            <div className="w-28 shadow-sm">TIME</div>
+            <div className="w-28">RISK</div>
+            <div className="w-56">THREAT VECTOR</div>
+            <div className="w-32">ORIGIN IP</div>
+            <div className="flex-1 text-right">MITIGATION REASON</div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto bg-black p-1">
+            {loading ? (
+              <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-600 font-mono text-xs uppercase tracking-widest">
+                  <div className="w-8 h-8 rounded-full border-2 border-transparent border-t-blue-500 animate-spin"></div>
+                  Initializing Sensors...
+              </div>
+            ) : alerts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full m-8 rounded-xl border border-blue-900/50 bg-gradient-to-b from-slate-900/20 to-blue-950/20 shadow-[inset_0_0_50px_rgba(30,58,138,0.1)]">
+                 <ShieldCheck size={48} className="text-blue-500 mb-4 opacity-80" />
+                 <h2 className="text-3xl font-black text-blue-400 tracking-widest uppercase mb-1 drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]">
+                    System Secure
+                 </h2>
+                 <p className="text-slate-500 font-mono text-xs tracking-widest uppercase">
+                    Continuous Monitoring Active
+                 </p>
+                 <div className="mt-8 flex items-center justify-center gap-2 text-emerald-500/70 text-[10px] font-mono tracking-widest bg-emerald-950/30 px-3 py-1 rounded border border-emerald-900/50">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                    No anomalies detected
+                 </div>
+              </div>
+            ) : (
+              alerts.map((alert, index) => {
+                // If it's the very first row and is high severity, flash it aggressively for demo impact
+                const isNewCritical = index === 0 && (alert.severity === 'CRITICAL' || alert.severity === 'HIGH');
+                
+                return (
+                  <div 
+                    key={alert.id}
+                    onClick={() => navigate(`/alerts/${alert.id}`)}
+                    className={`flex items-center px-4 py-3 cursor-pointer transition-all border-b border-slate-800/40 last:border-0 group 
+                      ${isNewCritical 
+                        ? 'bg-red-950/50 border-l-4 border-l-red-500 animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-500 shadow-[inset_0_0_20px_rgba(239,68,68,0.2)] hover:bg-red-900/60' 
+                        : 'hover:bg-slate-900/80 hover:shadow-[inset_4px_0_0_0_rgba(59,130,246,0.5)] border-l-4 border-l-transparent'
+                      }`}
+                  >
+                    <div className="w-28 text-slate-500 text-xs font-mono tracking-wider">
+                      {format(new Date(alert.timestamp), 'HH:mm:ss.SSS')}
+                    </div>
+                    <div className="w-28">
+                      <span className={`px-2 py-[2px] rounded text-[10px] tracking-widest font-black uppercase border ${getSeverityStyle(alert.severity)}`}>
+                        {alert.severity}
+                      </span>
+                    </div>
+                    <div className={`w-56 font-bold truncate text-xs uppercase transition-colors ${isNewCritical ? 'text-red-100' : 'text-slate-300 group-hover:text-white'}`}>
+                      {alert.threat_type || 'UNKNOWN'}
+                    </div>
+                    <div className={`w-32 font-bold text-xs opacity-90 transition-all ${isNewCritical ? 'text-red-300' : 'text-blue-400 group-hover:opacity-100'}`}>
+                      {alert.ip}
+                    </div>
+                    <div className="flex-1 text-right max-w-full">
+                      <span className={`px-3 py-1 rounded inline-block text-xs font-mono font-bold transition-all ${isNewCritical ? 'bg-red-900/60 text-red-200 border border-red-500/30' : 'bg-slate-900/80 text-slate-400 group-hover:text-slate-200 border border-slate-800'}`}>
+                          {simplifyReason(alert.detection?.reasoning || '', alert.threat_type)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="bg-[#0a0f1c] rounded-lg border border-slate-800 shadow-2xl overflow-hidden font-mono text-sm leading-relaxed">
-        <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex text-slate-500 text-xs tracking-wider items-center">
-          <div className="w-24">TIMESTAMP</div>
-          <div className="w-28">SEVERITY</div>
-          <div className="w-20">ENGINE</div>
-          <div className="w-48">VERDICT</div>
-          <div className="w-32">ACTOR IP</div>
-          <div className="flex-1">DETECTION REASONING</div>
-        </div>
-        
-        <div className="max-h-[750px] overflow-y-auto p-2">
-          {loading ? (
-            <div className="text-slate-500 p-4 text-center">Fetching latest threats...</div>
-          ) : alerts.length === 0 ? (
-            <div className="text-slate-500 p-4 text-center flex items-center justify-center gap-2">
-              <ShieldCheck size={16} className="text-emerald-500" /> No active threats detected in queue.
-            </div>
-          ) : (
-            alerts.map((alert) => (
-              <div 
-                key={alert.id}
-                onClick={() => navigate(`/alerts/${alert.id}`)}
-                className="flex items-center px-2 py-2.5 hover:bg-slate-800/50 cursor-pointer rounded transition-colors group border-b border-slate-800/50 last:border-0"
-              >
-                <div className="w-24 text-slate-500">
-                  [{format(new Date(alert.timestamp), 'HH:mm:ss')}]
-                </div>
-                <div className="w-28">
-                  <span className={`px-2 py-0.5 rounded text-xs border ${getSeverityStyle(alert.severity)}`}>
-                    {alert.severity}
-                  </span>
-                </div>
-                <div className="w-20">
-                   {alert.detection?.source === 'HYBRID' ? (
-                     <span 
-                        className="text-emerald-400 bg-emerald-900/20 px-1.5 py-0.5 rounded text-xs border border-emerald-800" 
-                        title={`Confidence: ${(alert.detection.confidence * 100).toFixed(1)}%`}
-                     >
-                        ML/AI
-                     </span>
-                   ) : (
-                     <span className="text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded text-xs border border-slate-700">RULE</span>
-                   )}
-                </div>
-                <div className="w-48 text-slate-300 font-semibold group-hover:text-white transition-colors truncate pr-2">
-                  {alert.detection?.type || 'UNKNOWN'}
-                </div>
-                <div className="w-32 text-blue-400/80">
-                  {alert.ip}
-                </div>
-                <div className="flex-1 text-slate-400 truncate pr-4 text-xs italic">
-                  "{alert.detection?.reasoning || 'Pattern match via localized heuristics'}"
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+      {/* 30% Active Tracker */}
+      <div className="flex-[1] h-full">
+        <ActiveAttackerPanel />
       </div>
     </div>
   );

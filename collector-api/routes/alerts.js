@@ -131,7 +131,7 @@ export function createAlertsRouter(db) {
           })) : [],
           intelligence: {
             ml_score: parseFloat(ml_score || alert.confidence || 0),
-            interpretation: logic ? logic.ml_component.classification : 'No behavioral divergence detected.',
+            interpretation: logic?.ml_component?.classification || 'No behavioral divergence detected.',
             signals: behavior_metrics ? Object.entries(behavior_metrics).map(([key, value]) => ({
               label: key.replace(/_/g, ' ').toUpperCase(),
               value: value,
