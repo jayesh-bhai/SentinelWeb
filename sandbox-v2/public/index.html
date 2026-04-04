@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velo-City — Premium Bike Rental</title>
+    <meta name="description" content="Rent premium bikes in cities worldwide. Road, Mountain, Electric — delivered to your doorstep.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+            colors: {
+              brand: { 50: '#eef8ff', 100: '#d9eeff', 200: '#bce2ff', 300: '#8ed0ff', 400: '#58b4ff', 500: '#3394ff', 600: '#1a73f5', 700: '#135be1', 800: '#164ab6', 900: '#18408f' },
+              surface: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 800: '#1e293b', 900: '#0f172a' }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      [x-cloak] { display: none !important; }
+      .fade-in { animation: fadeIn 0.3s ease-out; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      .skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+      @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    </style>
+</head>
+<body class="bg-white text-gray-900 font-sans antialiased">
+
+    <!-- NAVBAR -->
+    <nav class="fixed top-0 w-full bg-white/90 backdrop-blur-md border-b border-gray-100 z-50">
+      <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <a href="#" onclick="navigate('home')" class="flex items-center gap-2 cursor-pointer">
+          <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h3"/></svg>
+          </div>
+          <span class="text-xl font-extrabold tracking-tight">Velo<span class="text-brand-600">City</span></span>
+        </a>
+        <div class="flex items-center gap-6">
+          <a onclick="navigate('explore')" class="text-sm font-semibold text-gray-500 hover:text-gray-900 cursor-pointer transition-colors">Explore</a>
+          <div id="nav-auth">
+            <button onclick="navigate('login')" class="text-sm font-semibold bg-gray-900 text-white px-5 py-2 rounded-lg hover:bg-gray-800 transition-colors">Sign In</button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT AREA -->
+    <main id="app" class="pt-16 min-h-screen"></main>
+
+    <!-- FOOTER -->
+    <footer class="bg-gray-50 border-t border-gray-100 mt-20">
+      <div class="max-w-7xl mx-auto px-6 py-12 flex flex-col md:flex-row justify-between items-center gap-4">
+        <p class="text-sm text-gray-400">&copy; 2026 VeloCity Inc. All rights reserved.</p>
+        <div class="flex gap-6 text-sm text-gray-400">
+          <a href="#" class="hover:text-gray-600">Privacy</a>
+          <a href="#" class="hover:text-gray-600">Terms</a>
+          <a href="#" class="hover:text-gray-600">Support</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="/app.js"></script>
+</body>
+</html>
