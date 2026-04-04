@@ -187,7 +187,7 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 
 ### Phase 3 Roadmap (Demonstration & Productization) [CURRENT FOCUS]
 1. **Dashboard Polish**: Finalize all edge-case UI interactions so mitigation data is front-and-center for developers.
-2. **NPM Agent Packaging**: Extract the raw tracking agents into installable NPM packages (e.g., `@sentinelweb/express-agent`) with a strict single-tenant configuration.
+2. **NPM Agent Packaging**: Extract the raw tracking agents into installable NPM packages (e.g., `@sentinelweb/backend-agent`) with a strict single-tenant configuration. (COMPLETED & PUBLISHED TO PUBLIC REGISTRY)
 3. **Sandbox Application**: Create a lightweight, mock vulnerable web-app that natively installs the NPM packages.
 4. **Single-Tenant Refactor**: Completely remove all multi-tenancy, authentication headers, API keys, and user isolation code to streamline the demo architecture. (COMPLETED)
 5. **Live Attack Scenarios**: Execute 4-5 strictly orchestrated attack profiles (SQLi, Credential Stuffing, Rate Abuse, ML Anomalies) against the Sandbox to prove real-time SIEM visibility.

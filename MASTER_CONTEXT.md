@@ -65,7 +65,7 @@ With both backend and frontend locked down, the focus shifts entirely to end-to-
 
 ## 7. NEXT STEPS (STRICT EXECUTION ORDER)
 1. **Frontend Polish**: Ensure the current React Dashboard handles rendering of complex payloads and edge-cases perfectly before the final demo.
-2. **Agent Packaging**: Refactor and prepare the frontend and backend collecting agents as distributable NPM packages.
+2. **Agent Packaging**: Refactor and prepare the frontend and backend collecting agents as distributable NPM packages. (COMPLETED & PUBLISHED TO PUBLIC REGISTRY)
 3. **Sandbox Creation**: Develop a minimal, vulnerable dummy web application to install the NPM packages into.
 4. **Attack Orchestration**: Write the payload scripts to execute 4-5 distinct attacks against the sandbox to prove live dashboard tracking.
 
