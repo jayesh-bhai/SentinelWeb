@@ -54,21 +54,6 @@ async function logout() {
 //  PAGE: HOME
 // ============================================================
 function renderHome() {
-  /*
-    ? `
-              <button onclick="navigate('explore')" class="bg-gray-900 text-white px-8 py-3.5 rounded-xl font-bold text-sm hover:bg-gray-800 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-gray-900/20">
-                Explore Bikes â†’
-              </button>
-            `
-    : `
-              <button onclick="navigate('explore')" class="bg-gray-900 text-white px-8 py-3.5 rounded-xl font-bold text-sm hover:bg-gray-800 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-gray-900/20">
-                Explore Bikes â†’
-              </button>
-              <button onclick="navigate('signup')" class="bg-white text-gray-700 px-8 py-3.5 rounded-xl font-bold text-sm border border-gray-200 hover:border-gray-300 transition-colors">
-                Create Account
-              </button>
-            `;
-  */
   app.innerHTML = `
     <div class="fade-in">
       <!-- Hero -->
@@ -127,12 +112,6 @@ function renderHome() {
         </div>
       </section>
     </div>`;
-
-  if (currentUser) {
-    const homeButtons = Array.from(app.querySelectorAll('button'));
-    const signupButton = homeButtons.find(button => button.textContent.trim() === 'Create Account');
-    signupButton?.remove();
-  }
 }
 
 // ============================================================
@@ -554,9 +533,5 @@ async function doSignup() {
 // ============================================================
 //  INIT
 // ============================================================
-async function initApp() {
-  await checkAuth();
-  navigate('home');
-}
-
-initApp();
+checkAuth();
+navigate('home');
