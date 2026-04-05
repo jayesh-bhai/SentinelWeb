@@ -7,7 +7,7 @@
  */
 
 export class ThreatScorer {
-  constructor() {}
+  constructor() { }
 
   /**
    * Runs threat scoring logic based on rule hits and optional ML input
@@ -21,7 +21,7 @@ export class ThreatScorer {
     // 1. Calculate Rule Base Score
     let baseScore = 0.0;
     let maxRuleSeverity = "LOW";
-    
+
     if (ruleHits.length > 0) {
       if (ruleHits.some(r => r.severity === "CRITICAL")) {
         baseScore = 0.98;
@@ -41,22 +41,22 @@ export class ThreatScorer {
     // 2. Calculate ML Adjustment (Contribution)
     // Reduce the weight of ML adjustment to +/- 0.15 to prevent it from single-handedly killing a HIGH rule
     const anomalyScore = parseFloat(mlResult.anomaly_score || 0.5);
-    const mlAdjustment = (anomalyScore - 0.5) * 0.3; // 0.5 -> 0, 0.9 -> +0.12, 0.1 -> -0.12
-    
+    const mlAdjustment = (anomalyScore - 0.5) * 0.5; // 0.5 -> 0, 0.9 -> +0.20, 0.1 -> -0.20
+
     // 3. Fusion Logic
     let finalConfidence = Math.min(1.0, Math.max(0, baseScore + mlAdjustment));
-    
+
     // 4. Decision Logic
     const THREAT_THRESHOLD = 0.60;
     const SUSPICIOUS_THRESHOLD = 0.25;
-    
+
     let verdict = "SAFE";
     if (finalConfidence >= THREAT_THRESHOLD) verdict = "THREAT";
     else if (finalConfidence >= SUSPICIOUS_THRESHOLD) verdict = "SUSPICIOUS";
 
     // 5. Generate Reasoning Summary
     const mlImpact = mlAdjustment >= 0 ? `increased by ${mlAdjustment.toFixed(2)}` : `decreased by ${Math.abs(mlAdjustment).toFixed(2)}`;
-    const reasoning = ruleHits.length > 0 
+    const reasoning = ruleHits.length > 0
       ? `Base score ${baseScore.toFixed(2)} (${maxRuleSeverity} rule) ${mlImpact} due to behavior analysis.`
       : `No rules hit. Behavioral anomaly score ${anomalyScore.toFixed(2)} resulted in aggregate confidence ${finalConfidence.toFixed(2)}.`;
 

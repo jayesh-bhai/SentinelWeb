@@ -68,4 +68,6 @@ def predict(request: PredictionRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run("inference_api:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("ML_SERVICE_PORT", "8000"))
+    reload = os.environ.get("UVICORN_RELOAD", "").lower() in ("1", "true", "yes")
+    uvicorn.run("inference_api:app", host="0.0.0.0", port=port, reload=reload)

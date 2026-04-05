@@ -37,11 +37,14 @@ export default function LiveFeed() {
   };
 
   const simplifyReason = (reason, type) => {
-    if (type === 'SQL_INJECTION') return 'SQL Pattern Detected';
-    if (type === 'BRUTE_FORCE_STATEFUL') return 'Multiple failed logins';
-    if (type === 'RATE_LIMIT_ABUSE') return 'Request burst detected';
-    if (type === 'XSS_ATTACK') return 'Cross-site payload injected';
-    if (reason && (reason.includes("ML") || reason.includes("anomaly"))) return "Behavioral Anomaly Blocked";
+    if (!type) return 'Malicious payload intercepted';
+    const t = type.toUpperCase();
+    if (t.startsWith('SQLI')) return 'SQL Injection Detected';
+    if (t.startsWith('XSS')) return 'Cross-Site Scripting Detected';
+    if (t.includes('BRUTE_FORCE')) return 'Multiple Failed Logins';
+    if (t.includes('RATE')) return 'Request Burst Detected';
+    if (t.includes('SESSION_HIJACK')) return 'Session Hijack Attempt';
+    if (reason && (reason.includes('ANOMALY') || reason.includes('anomaly'))) return 'Behavioral Anomaly Blocked';
     return 'Malicious payload intercepted';
   };
 
@@ -114,14 +117,14 @@ export default function LiveFeed() {
                       </span>
                     </div>
                     <div className={`w-56 font-bold truncate text-xs uppercase transition-colors ${isNewCritical ? 'text-red-100' : 'text-slate-300 group-hover:text-white'}`}>
-                      {alert.threat_type || 'UNKNOWN'}
+                      {alert.detection?.type || alert.threat_type || 'UNKNOWN'}
                     </div>
                     <div className={`w-32 font-bold text-xs opacity-90 transition-all ${isNewCritical ? 'text-red-300' : 'text-blue-400 group-hover:opacity-100'}`}>
                       {alert.ip}
                     </div>
                     <div className="flex-1 text-right max-w-full">
                       <span className={`px-3 py-1 rounded inline-block text-xs font-mono font-bold transition-all ${isNewCritical ? 'bg-red-900/60 text-red-200 border border-red-500/30' : 'bg-slate-900/80 text-slate-400 group-hover:text-slate-200 border border-slate-800'}`}>
-                          {simplifyReason(alert.detection?.reasoning || '', alert.threat_type)}
+                          {simplifyReason(alert.detection?.reasoning || '', alert.detection?.type || alert.threat_type)}
                       </span>
                     </div>
                   </div>

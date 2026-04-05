@@ -1,12 +1,109 @@
+import 'dotenv/config';
 import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
+import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { DetectionEngine } from './detection-engine/index.js';
 import { createAlertsRouter } from './routes/alerts.js';
 import { createStatsRouter } from './routes/stats.js';
 import { z } from 'zod';
 import { createBehaviorsRouter } from './routes/behaviors.js';
 import { createActiveThreatsRouter } from './routes/active_threats.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function getMlPort() {
+  const p = Number(process.env.ML_SERVICE_PORT);
+  return Number.isFinite(p) && p > 0 ? p : 8000;
+}
+
+let mlChild = null;
+
+async function waitForMlHealth(port, maxAttempts = 90, delayMs = 400) {
+  const url = `http://127.0.0.1:${port}/health`;
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const r = await fetch(url);
+      if (r.ok) return true;
+    } catch {
+      /* not ready yet */
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  return false;
+}
+
+async function startMLService() {
+  const mlPort = getMlPort();
+  const venvPython =
+    process.platform === 'win32'
+      ? path.join(__dirname, 'ml', 'venv', 'Scripts', 'python.exe')
+      : path.join(__dirname, 'ml', 'venv', 'bin', 'python');
+  const script = path.join(__dirname, 'ml', 'inference_api.py');
+  const pythonExe = fs.existsSync(venvPython) ? venvPython : process.env.PYTHON || 'python';
+
+  if (!fs.existsSync(venvPython)) {
+    console.warn(`⚠️  ML venv not found at ${venvPython}, using "${pythonExe}" from PATH`);
+  }
+
+  mlChild = spawn(pythonExe, [script], {
+    cwd: __dirname,
+    env: {
+      ...process.env,
+      ML_SERVICE_PORT: String(mlPort),
+      PYTHONIOENCODING: 'utf-8',
+      PYTHONUTF8: '1'
+    },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+
+  const prefix = '[ml] ';
+  mlChild.stdout?.on('data', (buf) => process.stdout.write(prefix + buf.toString()));
+  mlChild.stderr?.on('data', (buf) => process.stderr.write(prefix + buf.toString()));
+
+  mlChild.on('error', (err) => {
+    console.error('❌ Failed to start ML service:', err.message);
+  });
+
+  mlChild.on('exit', (code, signal) => {
+    if (signal) {
+      console.log(`[ml] ML service stopped (${signal})`);
+    } else if (code !== 0 && code !== null) {
+      console.error(`❌ ML service exited with code ${code}`);
+    }
+  });
+
+  const ok = await waitForMlHealth(mlPort);
+  if (ok) {
+    console.log(`✅ ML Service started successfully (http://127.0.0.1:${mlPort})`);
+  } else {
+    console.error(
+      `❌ ML service did not respond on port ${mlPort} — predictions may fall back until it is healthy`
+    );
+  }
+}
+
+function stopMLService() {
+  if (mlChild && !mlChild.killed) {
+    mlChild.kill();
+    mlChild = null;
+  }
+}
+
+function registerMlShutdownHooks() {
+  const shutdown = () => {
+    stopMLService();
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+  process.on('exit', shutdown);
+}
+
+await startMLService();
+registerMlShutdownHooks();
 
 const app = express();
 app.use(cors());
@@ -298,7 +395,9 @@ app.post("/api/collect/backend", validatePayload(eventSchema), async (req, res) 
 
   // Process the event through the detection engine
   try {
-    const realIp = normalizeIp(req.socket.remoteAddress);
+    const realIp = req.body.ip_address && req.body.ip_address !== 'unknown'
+      ? normalizeIp(req.body.ip_address)
+      : normalizeIp(req.socket.remoteAddress);
     const enrichedEvent = {
       ...req.body,
       ip_address: realIp

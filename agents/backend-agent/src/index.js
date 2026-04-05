@@ -56,7 +56,7 @@ export class SentinelWebBackend {
       // Track request metrics
       this.trackRequest(req, ip, userAgent);
       
-      // Monitor for security threats
+      // Monitor for security threats and forward suspicious requests
       this.monitorSecurity(req, ip, userAgent);
       
       // Override res.end to capture response metrics
@@ -129,15 +129,29 @@ export class SentinelWebBackend {
   }
 
   /**
-   * Monitor for security threats
+   * Monitor for security threats and forward raw request to collector
    */
   monitorSecurity(req, ip, userAgent) {
+    let isSuspicious = false;
+
     // Check query parameters for SQL injection
     if (req.query) {
       for (const [key, value] of Object.entries(req.query)) {
         if (typeof value === 'string' && BackendUtils.isSuspiciousQuery(value)) {
           this.addSecurityEvent('sql_injection_attempt', 'high',
             `SQL injection pattern in query parameter: ${key}`, ip, userAgent, req.path);
+          isSuspicious = true;
+        }
+      }
+    }
+    
+    // Check request body for SQL injection
+    if (req.body && typeof req.body === 'object') {
+      for (const [key, value] of Object.entries(req.body)) {
+        if (typeof value === 'string' && BackendUtils.isSuspiciousQuery(value)) {
+          this.addSecurityEvent('sql_injection_attempt', 'high',
+            `SQL injection pattern in body field: ${key}`, ip, userAgent, req.path);
+          isSuspicious = true;
         }
       }
     }
@@ -148,12 +162,78 @@ export class SentinelWebBackend {
       if (BackendUtils.containsXSS(bodyStr)) {
         this.addSecurityEvent('xss_attempt', 'high',
           'XSS pattern detected in request body', ip, userAgent, req.path);
+        isSuspicious = true;
+      }
+    }
+
+    // Check query params for XSS
+    if (req.query) {
+      const queryStr = JSON.stringify(req.query);
+      if (BackendUtils.containsXSS(queryStr)) {
+        this.addSecurityEvent('xss_attempt', 'high',
+          'XSS pattern detected in query parameters', ip, userAgent, req.path);
+        isSuspicious = true;
       }
     }
     
     // Check for authentication endpoints
     if (req.path.includes('login') || req.path.includes('auth')) {
       this.authMetrics.totalLoginAttempts++;
+    }
+
+    // CRITICAL: Forward the raw request to the collector for deep analysis
+    // This gives the collector's Rule Engine and ML model the actual payload
+    if (isSuspicious || this.shouldForwardRequest(req)) {
+      this.sendImmediateEvent(req, ip, userAgent);
+    }
+  }
+
+  /**
+   * Determine if a request should be forwarded to the collector for analysis.
+   * Forwards auth-related, search, and filter requests.
+   */
+  shouldForwardRequest(req) {
+    const sensitivePatterns = ['login', 'auth', 'search', 'filter', 'admin', 'signup'];
+    const pathLower = req.path.toLowerCase();
+    return sensitivePatterns.some(p => pathLower.includes(p))
+      || (req.query && Object.keys(req.query).length > 0)
+      || (req.body && Object.keys(req.body).length > 0 && req.method === 'POST');
+  }
+
+  /**
+   * Send a per-request event to the collector in real-time.
+   * This provides the raw HTTP data the Rule Engine and ML model need.
+   */
+  async sendImmediateEvent(req, ip, userAgent) {
+    const configData = this.config.getConfig();
+    const event = {
+      sessionId: this.sessionId,
+      serverId: this.serverId,
+      timestamp: Date.now(),
+      event_type: 'http_request',
+      source: 'backend_agent',
+      ip_address: ip,
+      request: {
+        method: req.method,
+        path: req.path,
+        url: req.originalUrl || req.url,
+        query_params: req.query || {},
+        body: req.body || {},
+        headers: {
+          'user-agent': userAgent,
+          'content-type': req.get('Content-Type') || ''
+        }
+      }
+    };
+
+    try {
+      await fetch(configData.apiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event)
+      });
+    } catch (err) {
+      // Silent fail — don't break the target app
     }
   }
 

@@ -138,7 +138,7 @@ features[11] = totalCharCount > 0 ? specialCharCount / totalCharCount : 0;
     if (!str || typeof str !== 'string') return 0;
     
     // Count characters that are not alphanumeric or common safe characters
-    const specialCharsRegex = /[^a-zA-Z0-9\s\-_.~:/?#\[\]@!$&'()*+,;=%]/g;
+    const specialCharsRegex = /[^a-zA-Z0-9\s\-_.~]/g;
     const matches = str.match(specialCharsRegex);
     return matches ? matches.length : 0;
   }

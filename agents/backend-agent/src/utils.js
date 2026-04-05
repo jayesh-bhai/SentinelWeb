@@ -40,16 +40,19 @@ export class BackendUtils {
   }
 
   static isSuspiciousQuery(query) {
-    const suspiciousKeywords = [
-      'UNION', 'SELECT', 'DROP', 'DELETE', 'INSERT', 'UPDATE', 
-      'EXEC', 'SCRIPT', 'JAVASCRIPT', 'VBSCRIPT'
+    const patterns = [
+      /'\s*(or|and)\s+/i,
+      /1\s*=\s*1/i,
+      /--\s*$/,
+      /;\s*drop\s+/i,
+      /;\s*delete\s+/i,
+      /union\s+(all\s+)?select/i,
+      /'\s*;\s*/i,
+      /sleep\s*\(/i,
+      /benchmark\s*\(/i,
+      /exec\s*\(/i
     ];
-    
-    const queryUpper = query.toUpperCase();
-    return suspiciousKeywords.some(keyword => 
-      queryUpper.includes(keyword) && 
-      (queryUpper.includes('1=1') || queryUpper.includes('OR') || queryUpper.includes('UNION'))
-    );
+    return patterns.some(p => p.test(query));
   }
 
   static containsXSS(input) {

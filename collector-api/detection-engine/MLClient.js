@@ -1,7 +1,14 @@
 import fetch from "node-fetch";
 
+function defaultPredictUrl() {
+  const base =
+    process.env.ML_SERVICE_URL?.replace(/\/$/, "") ||
+    `http://127.0.0.1:${process.env.ML_SERVICE_PORT || "8000"}`;
+  return `${base}/predict`;
+}
+
 export class MLClient {
-  constructor(url = "http://localhost:8000/predict") {
+  constructor(url = defaultPredictUrl()) {
     this.url = url;
   }
 

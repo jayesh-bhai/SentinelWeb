@@ -12,7 +12,9 @@ export function createAlertsRouter(db) {
       const severity = req.query.severity;
 
       let query = `
-        SELECT a.id, a.timestamp, a.session_id as ip, a.threat_type, a.severity, a.confidence, 
+        SELECT a.id, a.timestamp, 
+               CASE WHEN a.ip IS NOT NULL AND a.ip != 'unknown' THEN a.ip ELSE a.session_id END as ip,
+               a.threat_type, a.severity, a.confidence, 
                CASE WHEN CAST(a.confidence AS REAL) > 0.0 THEN 'HYBRID' ELSE 'RULE' END as source, 
                a.matched_location as path,
                a.detection_logic
