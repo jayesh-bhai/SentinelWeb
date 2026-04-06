@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../../api/client';
 import { ShieldCheck, Target, Activity } from 'lucide-react';
+import { useEngineStatus } from '../../contexts/EngineStatusContext';
 
 export default function ActiveAttackerPanel() {
   const [activeData, setActiveData] = useState({ count: 0, actors: [] });
+  const { engine } = useEngineStatus();
 
   useEffect(() => {
+    if (!engine.collectorOnline) {
+      setActiveData({ count: 0, actors: [] });
+      return undefined;
+    }
+
     fetchActive();
     const interval = setInterval(fetchActive, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [engine.collectorOnline]);
 
   const fetchActive = async () => {
     try {
       const res = await apiClient.get('/active-threats');
       setActiveData(res.data.data);
     } catch (e) {
+      setActiveData({ count: 0, actors: [] });
       console.error(e);
     }
   };
@@ -30,11 +38,23 @@ export default function ActiveAttackerPanel() {
         
         <ShieldCheck size={56} className="text-blue-500/60 mb-6 drop-shadow-[0_0_15px_rgba(59,130,246,0.3)]" />
         <h3 className="text-blue-400 font-black uppercase tracking-[0.3em] text-lg mb-2">System Secure</h3>
-        <p className="text-slate-500 font-mono text-xs tracking-widest uppercase">No volumetric anomalies</p>
+          <p className="text-slate-500 font-mono text-xs tracking-widest uppercase">No volumetric anomalies</p>
         
         <div className="absolute bottom-6 left-0 w-full flex justify-center">
-           <div className="flex items-center gap-2 bg-black/40 px-3 py-1 rounded border border-slate-800 text-slate-500 text-[10px] font-mono tracking-widest uppercase">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></div> Active Scanning...
+           <div className={`flex items-center gap-2 bg-black/40 px-3 py-1 rounded border text-[10px] font-mono tracking-widest uppercase ${
+             engine.tone === 'online'
+               ? 'border-slate-800 text-slate-500'
+               : engine.tone === 'idle'
+                 ? 'border-amber-900/40 text-amber-300'
+                 : 'border-red-900/40 text-red-300'
+           }`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${
+                engine.tone === 'online'
+                  ? 'bg-blue-500 animate-pulse'
+                  : engine.tone === 'idle'
+                    ? 'bg-amber-400 animate-pulse'
+                    : 'bg-red-500'
+              }`}></div> {engine.detailLabel}
            </div>
         </div>
       </div>

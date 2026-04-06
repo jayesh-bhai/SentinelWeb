@@ -392,6 +392,12 @@ export class SentinelWebBackend {
     
     console.log('🚀 Starting SentinelWeb Backend Agent');
     
+    try {
+      this.sendMetrics(this.getMetrics());
+    } catch (error) {
+      console.error('Error sending initial backend metrics:', error);
+    }
+
     // Start periodic data collection
     this.collectionInterval = setInterval(() => {
       if (!this.isRunning) return;
