@@ -40,3 +40,7 @@ dataset.csv
 # Artifacts
 model.pkl
 scaler.pkl
+
+# SQLite temporary files
+*.db-shm
+*.db-wal

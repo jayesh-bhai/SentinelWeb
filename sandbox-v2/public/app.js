@@ -57,7 +57,7 @@ function renderHome() {
   app.innerHTML = `
     <div class="fade-in">
       <!-- Hero -->
-      <section class="relative bg-gradient-to-br from-brand-50 via-white to-blue-50 overflow-hidden">
+      <section class="relative bg-linear-gradient-to-br from-brand-50 via-white to-blue-50 overflow-hidden">
         <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMzMzk0ZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50"></div>
         <div class="max-w-7xl mx-auto px-6 py-28 md:py-40 relative">
           <div class="max-w-2xl">
@@ -112,6 +112,12 @@ function renderHome() {
         </div>
       </section>
     </div>`;
+
+  if (currentUser) {
+    const homeButtons = Array.from(app.querySelectorAll('button'));
+    const signupButton = homeButtons.find((button) => button.textContent.trim() === 'Create Account');
+    signupButton?.remove();
+  }
 }
 
 // ============================================================
@@ -190,7 +196,7 @@ async function loadBikes(filters = {}) {
 
     grid.innerHTML = data.data.map(bike => `
       <div onclick="navigate('bike', ${bike.id})" class="group cursor-pointer bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-gray-200/60 transition-all duration-300 hover:-translate-y-1">
-        <div class="h-48 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center relative overflow-hidden">
+        <div class="h-48 bg-linear-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center relative overflow-hidden">
           <span class="text-6xl opacity-30 group-hover:scale-110 transition-transform duration-500">${bike.type === 'Electric' ? '⚡' : bike.type === 'Mountain' ? '🏔️' : bike.type === 'Road' ? '🏎️' : '🚲'}</span>
           <div class="absolute top-3 right-3 bg-white/90 backdrop-blur px-2.5 py-1 rounded-lg text-xs font-bold text-gray-600">${bike.city}</div>
         </div>
@@ -240,7 +246,7 @@ async function searchBikes() {
 
     grid.innerHTML = data.data.map(bike => `
       <div onclick="navigate('bike', ${bike.id})" class="group cursor-pointer bg-white border border-gray-100 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-        <div class="h-48 bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
+        <div class="h-48 bg-linear-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
           <span class="text-6xl opacity-30">${bike.type === 'Electric' ? '⚡' : bike.type === 'Mountain' ? '🏔️' : bike.type === 'Road' ? '🏎️' : '🚲'}</span>
         </div>
         <div class="p-5">
@@ -274,8 +280,8 @@ async function renderBikeDetail(bikeId) {
         <button onclick="navigate('explore')" class="text-sm text-gray-400 hover:text-gray-900 mb-8 inline-flex items-center gap-1 transition-colors">← Back to catalog</button>
 
         <!-- Hero Card -->
-        <div class="bg-gradient-to-br from-gray-50 to-white border border-gray-100 rounded-2xl overflow-hidden mb-10">
-          <div class="h-64 bg-gradient-to-br from-brand-50 to-blue-50 flex items-center justify-center">
+        <div class="bg-linear-gradient-to-br from-gray-50 to-white border border-gray-100 rounded-2xl overflow-hidden mb-10">
+          <div class="h-64 bg-linear-gradient-to-br from-brand-50 to-blue-50 flex items-center justify-center">
             <span class="text-8xl opacity-20">${bike.type === 'Electric' ? '⚡' : bike.type === 'Mountain' ? '🏔️' : bike.type === 'Road' ? '🏎️' : '🚲'}</span>
           </div>
           <div class="p-8">
@@ -533,5 +539,9 @@ async function doSignup() {
 // ============================================================
 //  INIT
 // ============================================================
-checkAuth();
-navigate('home');
+async function initApp() {
+  await checkAuth();
+  navigate('home');
+}
+
+initApp();

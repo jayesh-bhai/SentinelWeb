@@ -5,7 +5,7 @@ import cookieParser from 'cookie-parser';
 import { fileURLToPath } from 'url';
 
 import db from './db.js';
-import authRoutes from './routes/auth.js';
+import createAuthRoutes from './routes/auth.js';
 import bikeRoutes from './routes/bikes.js';
 import reviewRoutes from './routes/reviews.js';
 
@@ -33,7 +33,7 @@ app.use(sentinel.middleware());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- API Routes ---
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', createAuthRoutes(sentinel));
 app.use('/api/bikes', bikeRoutes);
 app.use('/api/reviews', reviewRoutes);
 
