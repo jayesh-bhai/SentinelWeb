@@ -379,6 +379,27 @@ export class SentinelWebBackend {
   }
 
   /**
+   * Resets volumetric delta tracking after sync
+   */
+  resetPeriodicMetrics() {
+    this.authMetrics.failedLogins = 0;
+    this.authMetrics.successfulLogins = 0;
+    this.authMetrics.totalLoginAttempts = 0;
+    this.authMetrics.suspiciousLogins = [];
+    
+    this.apiMetrics.totalRequests = 0;
+    this.apiMetrics.rateLimitHits = 0;
+    this.apiMetrics.requestsByMethod = {};
+    this.apiMetrics.requestsByEndpoint = {};
+    this.apiMetrics.statusCodes = {};
+    this.apiMetrics.unusualEndpoints = [];
+    
+    this.responseTimes = [];
+    this.securityEvents = [];
+    this.errorEvents = [];
+  }
+
+  /**
    * Start periodic data collection
    */
   start() {
@@ -405,6 +426,7 @@ export class SentinelWebBackend {
       try {
         const metrics = this.getMetrics();
         this.sendMetrics(metrics);
+        this.resetPeriodicMetrics();
       } catch (error) {
         console.error('Error collecting backend metrics:', error);
       }
