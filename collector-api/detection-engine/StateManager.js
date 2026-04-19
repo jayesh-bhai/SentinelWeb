@@ -30,8 +30,9 @@ export class StateManager {
     const session = event.actor.session_id;
 
     // GLOBAL TRACKING (Record ALL requests to properly feed temporal ML)
-    if (ip) this.addTimestamp(this.ipRequests, ip, now);
-    if (session) this.addTimestamp(this.sessionRequests, session, now);
+    const requestCount = (event.behavior && event.behavior.request_count > 1) ? event.behavior.request_count : 1;
+    if (ip) this.addDistributedTimestamps(this.ipRequests, ip, now, requestCount);
+    if (session) this.addDistributedTimestamps(this.sessionRequests, session, now, requestCount);
 
     // Only process login attempts for the Native RuleEngine alerts
     if (event.event_type !== "login_attempt") return null;
@@ -51,8 +52,9 @@ export class StateManager {
     if (!isFailure) return null;
   
     // Record the failure
-    if (ip) this.addFailure(this.ipFailures, ip, now);
-    if (session) this.addFailure(this.sessionFailures, session, now);
+    const failureCount = (event.behavior && event.behavior.failed_auth_attempts > 1) ? event.behavior.failed_auth_attempts : 1;
+    if (ip) this.addDistributedTimestamps(this.ipFailures, ip, now, failureCount);
+    if (session) this.addDistributedTimestamps(this.sessionFailures, session, now, failureCount);
   
     // Track endpoint if provided
     if (session && event.request?.path) {
@@ -98,14 +100,29 @@ export class StateManager {
   }
 
   addFailure(map, key, timestamp) {
-    this.addTimestamp(map, key, timestamp);
+    this.addDistributedTimestamps(map, key, timestamp, 1);
   }
 
-  addTimestamp(map, key, timestamp) {
+  addDistributedTimestamps(map, key, endTimestamp, count) {
     if (!key) return;
     if (!map.has(key)) map.set(key, []);
-    map.get(key).push(timestamp);
-    this.lastSeen.set(key, timestamp);
+    const arr = map.get(key);
+    
+    if (count <= 1) {
+      arr.push(endTimestamp);
+    } else {
+      // Unpack aggregated grouped payload smoothly over the agent's sync period (typically ~30s)
+      const syncPeriodMs = 30000;
+      const startTimestamp = Math.max(0, endTimestamp - syncPeriodMs);
+      const step = syncPeriodMs / count;
+      
+      for(let i = 0; i < count; i++) {
+        // Ensure precise distribution across the trailing window bounds
+        arr.push(Math.floor(startTimestamp + (i * step)));
+      }
+    }
+    
+    this.lastSeen.set(key, endTimestamp);
   }
 
   getIpRequestRate(ip, now) {
