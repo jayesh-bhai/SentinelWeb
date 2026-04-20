@@ -94,7 +94,7 @@ export class ThreatScorer {
 
     return {
       is_threat: verdict === "THREAT",
-      threat_type: ruleHits.length > 0 ? ruleHits[0].rule_id : (verdict === "SUSPICIOUS" ? "BEHAVIORAL_ANOMALY" : "NONE"),
+      threat_type: ruleHits.length > 0 ? ruleHits[0].rule_id : ((verdict === "SUSPICIOUS" || verdict === "THREAT") ? "BEHAVIORAL_ANOMALY" : "NONE"),
       severity: verdict === "THREAT" ? maxRuleSeverity : (verdict === "SUSPICIOUS" ? "LOW" : "NONE"),
       confidence: finalConfidence.toFixed(2),
       explanation: reasoning,

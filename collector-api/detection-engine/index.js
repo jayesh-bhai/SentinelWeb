@@ -118,8 +118,8 @@ export class DetectionEngine {
       explanation: threatAssessment.explanation,
       rule_hits: JSON.stringify(ruleHits), // Store structured rule evidence
       detection_logic: threatAssessment.detection_logic, // Store mathematical fusion metadata
-      offending_payload: this.extractOffendingPayload(ruleHits),
-      matched_location: this.extractMatchedLocation(ruleHits),
+      offending_payload: this.extractOffendingPayload(ruleHits, normalizedEvent),
+      matched_location: this.extractMatchedLocation(ruleHits, normalizedEvent),
       timestamp: new Date().toISOString()
     };
 
@@ -127,30 +127,42 @@ export class DetectionEngine {
     await this.persistence.storeAlert(alertData);
   }
 
-  extractOffendingPayload(ruleHits) {
+  extractOffendingPayload(ruleHits, normalizedEvent) {
     // Extract the first offending payload from evidence for alert storage
-    if (ruleHits.length > 0 && ruleHits[0].evidence && ruleHits[0].evidence.length > 0) {
+    if (ruleHits && ruleHits.length > 0 && ruleHits[0].evidence && ruleHits[0].evidence.length > 0) {
       const firstEvidence = ruleHits[0].evidence[0];
       if (firstEvidence.value) {
         // If it's an array (like payloads), get the first value
         if (Array.isArray(firstEvidence.value)) {
           if (firstEvidence.value.length > 0 && firstEvidence.value[0].value) {
-            return firstEvidence.value[0].value;
+            return String(firstEvidence.value[0].value);
           }
         } else {
           return String(firstEvidence.value);
         }
       }
     }
+
+    // Fallback: If ML Autonomy triggered without rules, grab the raw payload directly from the event
+    if (normalizedEvent && normalizedEvent.payloads && normalizedEvent.payloads.length > 0) {
+        return String(normalizedEvent.payloads[0].value || 'No specific payload identified');
+    }
+
     return 'No specific payload identified';
   }
 
-  extractMatchedLocation(ruleHits) {
+  extractMatchedLocation(ruleHits, normalizedEvent) {
     // Extract the location where the first match occurred
-    if (ruleHits.length > 0 && ruleHits[0].evidence && ruleHits[0].evidence.length > 0) {
-      return ruleHits[0].evidence[0].field || 'unknown';
+    if (ruleHits && ruleHits.length > 0 && ruleHits[0].evidence && ruleHits[0].evidence.length > 0) {
+      return String(ruleHits[0].evidence[0].field || 'unknown');
     }
-    return 'unknown';
+
+    // Fallback: If ML Autonomy triggered without rules, grab the raw location directly from the event
+    if (normalizedEvent && normalizedEvent.payloads && normalizedEvent.payloads.length > 0) {
+        return String(normalizedEvent.payloads[0].field || 'behavior.anomaly');
+    }
+
+    return 'behavior.anomaly';
   }
 
   async getAlerts(limit = 50) {

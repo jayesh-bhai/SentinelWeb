@@ -66,7 +66,11 @@ export default function AlertDetails() {
                         <span className={`text-[10px] uppercase font-black tracking-widest px-2 py-0.5 rounded border ${isCritical ? 'bg-red-950/50 text-red-400 border-red-900' : 'bg-orange-950/50 text-orange-400 border-orange-900'}`}>
                             {summary.severity} RISK
                         </span>
-                        <span className="text-slate-500 text-xs font-mono tracking-wider">{new Date(context.timestamp).toLocaleString()}</span>
+                        <span className="text-slate-500 text-xs font-mono tracking-wider">
+                          {typeof context.timestamp === 'string' && !context.timestamp.includes('Z') && !context.timestamp.includes('T')
+                            ? new Date(context.timestamp.replace(' ', 'T') + 'Z').toLocaleString()
+                            : new Date(context.timestamp).toLocaleString()}
+                        </span>
                     </div>
                 </div>
             </div>
