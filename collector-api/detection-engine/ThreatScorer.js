@@ -39,9 +39,16 @@ export class ThreatScorer {
     }
 
     // 2. Calculate ML Adjustment (Contribution)
-    // Reduce the weight of ML adjustment to +/- 0.15 to prevent it from single-handedly killing a HIGH rule
     const anomalyScore = parseFloat(mlResult.anomaly_score || 0.5);
-    const mlAdjustment = (anomalyScore - 0.5) * 0.5; // 0.5 -> 0, 0.9 -> +0.20, 0.1 -> -0.20
+    let mlAdjustment = (anomalyScore - 0.5) * 0.5; // Modifier
+
+    // 2.5 ML AUTONOMY OVERRIDE
+    // If no rules hit but ML is highly confident it's an anomaly, the ML acts autonomously.
+    if (ruleHits.length === 0 && anomalyScore >= 0.55) {
+      baseScore = anomalyScore;
+      maxRuleSeverity = anomalyScore >= 0.80 ? "CRITICAL" : "HIGH";
+      mlAdjustment = 0; // It is the base score now, so no adjustment needed
+    }
 
     // 3. Fusion Logic
     let finalConfidence = Math.min(1.0, Math.max(0, baseScore + mlAdjustment));
@@ -55,10 +62,12 @@ export class ThreatScorer {
     else if (finalConfidence >= SUSPICIOUS_THRESHOLD) verdict = "SUSPICIOUS";
 
     // 5. Generate Reasoning Summary
-    const mlImpact = mlAdjustment >= 0 ? `increased by ${mlAdjustment.toFixed(2)}` : `decreased by ${Math.abs(mlAdjustment).toFixed(2)}`;
+    const mlImpact = mlAdjustment === 0 ? '' : (mlAdjustment > 0 ? `increased by ${mlAdjustment.toFixed(2)}` : `decreased by ${Math.abs(mlAdjustment).toFixed(2)}`);
     const reasoning = ruleHits.length > 0
       ? `Base score ${baseScore.toFixed(2)} (${maxRuleSeverity} rule) ${mlImpact} due to behavior analysis.`
-      : `No rules hit. Behavioral anomaly score ${anomalyScore.toFixed(2)} resulted in aggregate confidence ${finalConfidence.toFixed(2)}.`;
+      : (anomalyScore >= 0.55 
+          ? `Autonomous ML Deflection: Extreme mathematical anomaly detected with a confidence of ${(anomalyScore * 100).toFixed(0)}%.`
+          : `No rules hit. Behavioral anomaly score ${anomalyScore.toFixed(2)} resulted in aggregate confidence ${finalConfidence.toFixed(2)}.`);
 
     // 6. Structured Detection Logic (Explainable UI/API)
     const detectionLogic = {

@@ -61,6 +61,7 @@ export class BackendUtils {
       'javascript:',
       'onclick=',
       'onload=',
+      'onerror=',
       '<iframe',
       'eval(',
       'alert('
