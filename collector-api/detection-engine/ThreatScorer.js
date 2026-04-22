@@ -42,11 +42,12 @@ export class ThreatScorer {
     const anomalyScore = parseFloat(mlResult.anomaly_score || 0.5);
     let mlAdjustment = (anomalyScore - 0.5) * 0.5; // Modifier
 
-    // 2.5 ML AUTONOMY OVERRIDE
-    // If no rules hit but ML is highly confident it's an anomaly, the ML acts autonomously.
-    if (ruleHits.length === 0 && anomalyScore >= 0.55) {
+    // 2.5 ML AUTONOMY OVERRIDE (Safety net for true zero-day attacks only)
+    // Only activates when NO rules matched AND the ML model is extremely confident (≥0.85).
+    // This prevents normal batch telemetry (which scores ~0.55-0.65) from flooding the dashboard.
+    if (ruleHits.length === 0 && anomalyScore >= 0.85) {
       baseScore = anomalyScore;
-      maxRuleSeverity = anomalyScore >= 0.80 ? "CRITICAL" : "HIGH";
+      maxRuleSeverity = anomalyScore >= 0.95 ? "CRITICAL" : "HIGH";
       mlAdjustment = 0; // It is the base score now, so no adjustment needed
     }
 
@@ -65,7 +66,7 @@ export class ThreatScorer {
     const mlImpact = mlAdjustment === 0 ? '' : (mlAdjustment > 0 ? `increased by ${mlAdjustment.toFixed(2)}` : `decreased by ${Math.abs(mlAdjustment).toFixed(2)}`);
     const reasoning = ruleHits.length > 0
       ? `Base score ${baseScore.toFixed(2)} (${maxRuleSeverity} rule) ${mlImpact} due to behavior analysis.`
-      : (anomalyScore >= 0.55 
+      : (anomalyScore >= 0.85 
           ? `Autonomous ML Deflection: Extreme mathematical anomaly detected with a confidence of ${(anomalyScore * 100).toFixed(0)}%.`
           : `No rules hit. Behavioral anomaly score ${anomalyScore.toFixed(2)} resulted in aggregate confidence ${finalConfidence.toFixed(2)}.`);
 
@@ -92,9 +93,40 @@ export class ThreatScorer {
       verdict: verdict
     };
 
+    // Dynamically classify autonomous anomalies based on leading statistical features
+    let mlAutonomousThreatType = "BEHAVIORAL_ANOMALY";
+    
+    // 1. First, check if the backend agent explicitly embedded a security label in the batched payloads
+    if (event && event.payloads && Array.isArray(event.payloads)) {
+      const payloadStr = JSON.stringify(event.payloads).toUpperCase();
+      if (payloadStr.includes('XSS')) {
+        mlAutonomousThreatType = "XSS_ANOMALY";
+      } else if (payloadStr.includes('BRUTE') || payloadStr.includes('LOGIN')) {
+        mlAutonomousThreatType = "BRUTE_FORCE_ANOMALY";
+      } else if (payloadStr.includes('SQL')) {
+        mlAutonomousThreatType = "SQLI_ANOMALY";
+      }
+    }
+
+    // 2. If no explicit label, infer mathematically from feature vectors
+    if (mlAutonomousThreatType === "BEHAVIORAL_ANOMALY" && features && features.length >= 12) {
+      if (features[11] > 0.10) { 
+        // Abnormally high special character ratio strongly implies XSS payload injection
+        mlAutonomousThreatType = "XSS_ANOMALY";
+      } else if (features[0] > 0) { 
+        // Spike in IP failures
+        mlAutonomousThreatType = "BRUTE_FORCE_ANOMALY";
+      } else if (features[4] > 0) {
+        // High rate violation
+        mlAutonomousThreatType = "RATE_ABUSE_ANOMALY";
+      } else if (features[5] > 0.8) {
+        mlAutonomousThreatType = "SESSION_HIJACK_ANOMALY";
+      }
+    }
+
     return {
       is_threat: verdict === "THREAT",
-      threat_type: ruleHits.length > 0 ? ruleHits[0].rule_id : ((verdict === "SUSPICIOUS" || verdict === "THREAT") ? "BEHAVIORAL_ANOMALY" : "NONE"),
+      threat_type: ruleHits.length > 0 ? ruleHits[0].rule_id : ((verdict === "SUSPICIOUS" || verdict === "THREAT") ? mlAutonomousThreatType : "NONE"),
       severity: verdict === "THREAT" ? maxRuleSeverity : (verdict === "SUSPICIOUS" ? "LOW" : "NONE"),
       confidence: finalConfidence.toFixed(2),
       explanation: reasoning,

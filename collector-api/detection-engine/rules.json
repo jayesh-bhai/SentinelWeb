@@ -30,7 +30,7 @@
       {
         "field": "payloads",
         "operator": "regex",
-        "value": "(<script|javascript:|on\\\\w+\\\\s*=|<iframe|<object|<embed|<svg|<img[^>]*onload)"
+        "value": "(<script|javascript:|on\\w+\\s*=|<iframe|<object|<embed|<svg|<img[^>]*on\\w+=)"
       }
     ],
     "description": "Detects basic XSS patterns"
@@ -42,7 +42,7 @@
       {
         "field": "request.query_params",
         "operator": "regex",
-        "value": "(<script|javascript:|on\\\\w+\\\\s*=)"
+        "value": "(<script|javascript:|on\\w+\\s*=)"
       }
     ],
     "description": "Detects XSS in query parameters"
