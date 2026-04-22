@@ -15,7 +15,7 @@ function deriveStatus(healthData, runtimeData) {
     };
   }
 
-  const lastReceived = healthData.stats?.backendAgents?.lastReceived || runtimeData?.last_reported_at || null;
+  const lastReceived = healthData.stats?.backendAgents?.lastReceived || runtimeData?.latest?.last_reported_at || runtimeData?.last_reported_at || null;
   const lastReceivedMs = lastReceived ? new Date(lastReceived).getTime() : 0;
   const backendActive = lastReceivedMs > 0 && Date.now() - lastReceivedMs < 90000;
 

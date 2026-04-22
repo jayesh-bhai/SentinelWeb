@@ -72,17 +72,23 @@ export function createBackendRuntimeRouter(db) {
 
   router.get('/backend', async (req, res) => {
     try {
+      // Fetch more events to build a history (e.g., last 20 telemetry snapshots)
       const events = await db.all(
         `SELECT event_data, session_id, server_id, timestamp
          FROM raw_events
          WHERE server_id != 'unknown'
          ORDER BY timestamp DESC
-         LIMIT 50`
+         LIMIT 100`
       );
 
-      const runtime = events.map(extractRuntimePayload).find(Boolean);
+      // Extract and filter valid telemetry payloads
+      const history = events
+        .map(extractRuntimePayload)
+        .filter(Boolean)
+        .slice(0, 20) // Keep the most recent 20 valid snapshots
+        .reverse(); // Chronological order for charting
 
-      if (!runtime) {
+      if (history.length === 0) {
         return res.status(404).json({
           status: 'error',
           message: 'No backend runtime telemetry available yet.'
@@ -91,7 +97,10 @@ export function createBackendRuntimeRouter(db) {
 
       res.json({
         status: 'success',
-        data: runtime
+        data: {
+          latest: history[history.length - 1],
+          history: history
+        }
       });
     } catch (e) {
       console.error('API Error /runtime/backend:', e);
