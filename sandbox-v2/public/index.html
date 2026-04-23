@@ -65,5 +65,21 @@
     </footer>
 
     <script src="/app.js"></script>
+
+    <!-- SentinelWeb Frontend Agent (Stealth Mode) -->
+    <script>
+      window.SentinelWebConfig = {
+        apiEndpoint: 'http://localhost:5000/api/collect/frontend',
+        debug: true,
+        collectInterval: 30000,
+        privacy: {
+          maskSensitiveData: true,
+          excludeSelectors: ['input[type="password"]'],
+          respectDoNotTrack: true
+        }
+      };
+      window.SentinelWebAutoStart = true;
+    </script>
+    <script src="/sentinel-frontend-agent.js"></script>
 </body>
 </html>

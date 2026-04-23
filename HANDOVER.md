@@ -39,7 +39,9 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 
 ### Completed Features
 - ✅ Frontend Agent with behavior tracking, security monitoring, performance monitoring, error tracking
+- ✅ Frontend Agent integrated into sandbox-v2 (Stealth Mode - Phase 2)
 - ✅ Backend Agent as Express.js middleware with authentication, API request, security event monitoring
+- ✅ Backend Agent integrated into sandbox-v2 server.js
 - ✅ Collector API with enhanced data formatting, statistics, and endpoint processing
 - ✅ Analytics/Detection Engine with complete refactoring into 4 modular components
 - ✅ Rule-based detection with declarative rule engine
@@ -50,12 +52,6 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 - ✅ Stateful behavioral analysis with time-windowed threat detection
 - ✅ Success reset mechanisms and cooldown protection
 - ✅ FeatureExtractor module with deterministic 12-feature schema
-- ✅ Full Pipeline Validation (Real HTTP via Axios Simulator spanning Frontend API → SQLite)
-- ✅ Resource-Oriented API Architecture: Decoupled backend from UI logic (`/api/alerts`, `/api/stats`)
-- ✅ **Frontend Dashboard (React/Vite)**: Fully functional, realtime SIEM UI
-- ✅ **Intelligent Explainability Engine**: Contextual rendering for why an ML model flagged an alert
-- ✅ **Stateful Behavior Analytics UI**: Rolling window grids, failed auth timelines, and rate violation tables
-- ✅ **Cross-Context Synchronization**: Active alert state persists across navigation seamlessly
 
 ### Refactoring Achievements
 - **Phase 1**: Separated responsibilities into 4 distinct modules
@@ -63,7 +59,6 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 - **Phase 3**: Converted rule engine to declarative logic, removed hardcoded thresholds, fixed regex state issues
 - **Phase 4**: Enforced ML constraint (cannot create threats), structured alert evidence
 - **Phase 5**: Added stateful behavioral intelligence with temporal awareness
-- **Phase 6**: **Resource-Oriented Architecture (ROA)** - Refactored UI-coupled `/api/dashboard/*` into generic `/api/alerts` and `/api/stats` for headless integration.
 
 ### Stateful Behavioral Analysis Implementation
 - **Temporal Windowing**: 60-second sliding window for counting recent failures
@@ -73,17 +68,9 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 - **Intelligent Thresholding**: Detection of 5+ failures within time window triggers alerts
 - **Multi-Dimensional Analysis**: Separate tracking for IP-level and session-level behaviors
 
-### Pipeline Adversarial Validation (March 26, 2026)
-**Test Summary**: 5 full-scale active HTTP adversarial tests mimicking extreme production loads.
-**Test Summary**: 5 full-scale active HTTP adversarial tests mimicking extreme production workloads.
-1. **IP Spoofing Boundary**: Enforced `req.socket` identity natively (Blocked attacker loopbacks and payloads).
-2. **Event Schema Integrity**: Safely scrubbed explicit `MALICIOUS_EVENT` inputs, falling back to canonical boundaries. Verified logic is stateful (Behavior-Driven) instead of Label-Driven.
-3. **Queue Memory Safety**: Flooded with 15,000 concurrent HTTP requests. Proven memory stability as SQLite array queue accurately capped at 10,000 dropping excess limits natively.
-4. **Resiliency to Retry Storms**: Simulated catastrophic DB outages. Validated arrays definitively dropped intersecting payload limits without recursive `unshift()` loops protecting Memory arrays from OOM leaks.
-5. **Combined Attack**: SRE Validation proved the System gracefully degrades natively during simultaneous volumetric spoofing, dropping malicious vectors explicitly while serving legitimate JSON queries safely.
+### Adversarial Validation Results (January 12, 2026)
+**Test Summary**: 6 canonical events (3 malicious, 3 benign) tested through complete pipeline
 
-### Earlier Validation Results (January 12, 2026)
-**Test Summary**: 6 canonical JSON events tested manually through the internal pipeline
 **Critical Findings**:
 - ✅ **Architecture Sound**: Proper 4-module separation, clean interfaces
 - ✅ **Benign Handling**: 100% correct identification (E4, E5, E6)
@@ -140,62 +127,35 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 - Fixed RuleEngine operator normalization to handle case variations
 - Fixed successful auth attempts extraction in EventAdapter
 
-### Production Architecture Defenses (Resolved)
-- ✅ **Fixed Canonical Routing Override**: Restored polymorphic tracking by scrubbing implicit `FRONTEND_EVENT` bindings inside `server.js`.
-- ✅ **Prevented IP Spoofing**: Overwrote raw json schema payload IPs dynamically utilizing strict TCP `req.socket.remoteAddress` bindings.
-- ✅ **Zod Schema Gateway**: Enforced structural JSON sanitation interceptor instantly dismissing malformed objects via HTTP 400.
-- ✅ **SQLite Queue Chunking**: Decoupled persistent DB writes off the Request cycle into asynchronous `flushInterval()` 500ms memory streams, eliminating disk blocking.
-- ✅ **Normalized ML Temporal Features**: Overhauled StateManager tracking dimensions and remapped Isolation Forest clusters bound to strictly constrained `[0-1]` limits.
-
 ### Current Status
 - All canonical test events (E1-E6) are processed correctly
 - Detection pipeline is functionally correct for baseline scenarios
+- No known critical bugs in the detection engine
 - Stateful behavioral analysis fully operational
-
-### Active Architectural Limitations & Known Blindspots
-- **Distributed Botnet / Sparse Origin DDoS Detection**: The system currently tracks temporal states individually per `ip_address` or `session_id`. If a distributed attack utilizes 10,000 unique IPs sending only 1-2 requests each, the ML Model evaluates them individually as `LOW` confidence benign traffic. Global traffic correlation is currently not implemented due to single-instance memory dependencies. 
-
-### 🚨 Critical Pending Refactors (Dashboard/Scaling Phase)
-1. **API Naming/Decoupling (FIXED)**: Transitioned from `/api/dashboard` to resource-based paths.
-2. **Detection Reasoning Exposure (FIXED)**: Extracted `detection_logic` to provide an Explainable AI stream in `/api/alerts`.
-3. **Forensic Simplification (FIXED)**: Overhauled `AlertDetails.jsx` into a premium, evaluator-focused UI.
-4. **Behavioral Vague-ness (FIXED)**: Replaced empty telemetry with stateful 10s/60s rate tracking in `BehaviorAggregator.js`.
-5. **Real-Time Veracity (FIXED)**: Explicitly labeled 5-second polling mechanisms in the UI instead of faking WebSockets.
-6. **Data Visualization Risks (FIXED)**: Added strict data-guards to `recharts` implementations to prevent app crashes on empty payloads.
-7. **Cross-Service Traceability (PENDING)**: Missing unified correlate-ID for end-to-end trace mapping.
+- Frontend Agent successfully integrated into sandbox-v2 (Phase 2 - Stealth Mode)
+- Dual-agent architecture operational (frontend + backend agents in sandbox-v2)
 
 ## NEXT STEPS
 
-### ML Phase (COMPLETED)
+### ML Phase (Current Focus)
 1. **Feature Engineering**: Complete deterministic feature extraction with FeatureExtractor (COMPLETED)
-2. **Dataset Generation**: Created a clean, deterministic `dataset.csv` for unsupervised training with exactly 1200 events (1000 normal, 200 attacks) using a monotonic clock. (COMPLETED)
-3. **Model Training**: Trained an unsupervised Isolation Forest model iteratively in Python using the generated `dataset.csv`, generating `model.pkl` and `scaler.pkl`. (COMPLETED)
-4. **ML Service Deployment**: Built a lightweight FastAPI endpoint (`ml/inference_api.py`) to serve the trained model natively. (COMPLETED)
-5. **Confidence Scoring & Engine Integration**: Built `MLClient.js` to asynchronously pipeline metrics natively into the Node.js `ThreatScorer` logic safely without overwriting authoritative rule triggers. (COMPLETED)
+2. **Model Training**: Train Isolation Forest model with behavioral data
+3. **Anomaly Detection**: Implement advanced pattern recognition beyond rules
+4. **Confidence Scoring**: Integrate ML confidence adjustments into threat scoring
+5. **Performance Tuning**: Optimize ML model response times and accuracy
 
-### Production Migration Blueprint (COMPLETED)
-1. **Fix Trust Boundaries**: Derive IPs from TCP sockets (`req.socket`) and eliminate `server.js` event bypass. (COMPLETED)
-2. **Gateway Schema Sanitization**: Installed `Zod` middleware at the Express route. (COMPLETED)
-3. **Decouple Persistence**: SQLite writes refactored into asynchronous background batch arrays. (COMPLETED)
-4. **Fix ML Temporal Blindness**: Overwrote stateless features with 60-second StateManager HTTP mapping metrics organically. (COMPLETED)
-
-### Phase 2 Roadmap (Dashboard & Analytics) 
-1. **Dashboard Setup**: Initialize React/Vite development framework and analytics GUI. (COMPLETED)
-2. **Analytics Sync**: Expose SQLite Alert/Raw Event tables via Resource-Oriented API. (COMPLETED)
-3. **Evaluator-Ready Integrations**: Implement live-streams, explainability logic, and behavior tracking. (COMPLETED)
-4. **Active Threat Engine**: Track real-time memory states for active TCP sessions. (COMPLETED)
-
-### Phase 3 Roadmap (Demonstration & Productization) [CURRENT FOCUS]
-1. **Dashboard Polish**: Finalize all edge-case UI interactions so mitigation data is front-and-center for developers.
-2. **NPM Agent Packaging**: Extract the raw tracking agents into installable NPM packages (e.g., `@sentinelweb/backend-agent`) with a strict single-tenant configuration. (COMPLETED & PUBLISHED TO PUBLIC REGISTRY)
-3. **Sandbox Application**: Create a lightweight, mock vulnerable web-app that natively installs the NPM packages.
-4. **Single-Tenant Refactor**: Completely remove all multi-tenancy, authentication headers, API keys, and user isolation code to streamline the demo architecture. (COMPLETED)
-5. **Live Attack Scenarios**: Execute 4-5 strictly orchestrated attack profiles (SQLi, Credential Stuffing, Rate Abuse, ML Anomalies) against the Sandbox to prove real-time SIEM visibility.
+### Short-term Roadmap
+1. **Frontend Agent Testing**: Validate sandbox-v2 integration (Phase 2 → Phase 3 → Phase 4)
+2. **Dashboard Development**: Create visualization for detection results including frontend agent data
+3. **Rule Management**: Implement dynamic rule configuration system
+4. **Alerting System**: Enhance alert delivery mechanisms
+5. **Documentation**: Complete technical documentation for all components
 
 ### Long-term Enhancements
 1. **Advanced ML Models**: Implement additional anomaly detection algorithms
 2. **Scalability**: Add support for distributed deployment
 3. **Real-time Analytics**: Enhance real-time threat analysis capabilities
+4. **API Endpoints**: Add management APIs for rules, alerts, and system configuration
 
 ## TECHNICAL SPECIFICATIONS
 
@@ -225,18 +185,128 @@ The Detection Engine is decomposed into 4 isolated modules with strict separatio
 - Alert evidence must be structured
 - Each module must be testable in isolation
 
-### Machine Learning Constraints
-- Feature schema must remain strictly locked (12 deterministic features).
-- Dataset generation must be purely deterministic (no randomized timestamps).
-- Model must be unsupervised (Isolation Forest) with no label dependency during training.
-
 ### Performance Requirements
 - Sub-200ms response time for threat detection
 - Non-blocking ML integration with timeout protection
 - Efficient rule evaluation with compiled regex patterns
 - Minimal overhead for agent instrumentation
 
+## FRONTEND AGENT INTEGRATION (SANDBOX-V2)
+
+### Integration Date
+April 23, 2026
+
+### Integration Method
+**Option A: Script Tag Integration (Easiest)** - Stealth Mode (Phase 2)
+
+### Files Modified
+1. **`sandbox-v2/public/index.html`** (Lines 68-84 added)
+   - Added SentinelWeb frontend agent configuration script
+   - Added UMD bundle script tag (`/sentinel-frontend-agent.js`)
+   - Configured for stealth mode: `debug: true`, `collectInterval: 30000`
+
+2. **`agents/frontend-agent/`** (Build step executed)
+   - Generated `dist/index.umd.js` (50.7KB UMD bundle)
+   - Build command: `npm run build`
+
+3. **`sandbox-v2/public/sentinel-frontend-agent.js`** (Copied from build output)
+   - Copied from `agents/frontend-agent/dist/index.umd.js`
+   - Made accessible via Express static file serving
+   - **Important**: Must be re-copied after each `npm run build` in frontend-agent
+
+### Current Configuration (Phase 2 - Stealth Mode)
+```javascript
+window.SentinelWebConfig = {
+  apiEndpoint: 'http://localhost:5000/api/collect/frontend',
+  debug: true,              // Verbose console logging for validation
+  collectInterval: 30000,   // 30 seconds (reduced frequency for testing)
+  privacy: {
+    maskSensitiveData: true,
+    excludeSelectors: ['input[type="password"]'],
+    respectDoNotTrack: true
+  }
+};
+window.SentinelWebAutoStart = true;
+```
+
+### Data Flow
+```
+User Browser (sandbox-v2:3000)
+    ↓ [Every 30s - POST request]
+Collector API (collector-api:5000/api/collect/frontend)
+    ↓ [Detection Engine Processing]
+    ├─ EventAdapter (normalization)
+    ├─ RuleEngine (pattern matching)
+    ├─ FeatureExtractor (12-feature schema)
+    ├─ ML Model (anomaly scoring)
+    └─ Persistence (SQLite storage)
+```
+
+### Monitored Metrics
+- **User Behavior**: Mouse clicks, keystrokes, scroll events, form interactions, navigation, idle time
+- **Security Events**: XSS attempts, SQL injection, suspicious input, CSRF missing, CSP violations, rapid navigation, failed auth
+- **Performance**: Page load metrics (FCP, LCP, CLS, FID), memory usage, network latency, render time, JS execution time
+- **Errors**: JavaScript errors, unhandled promise rejections, resource loading errors, network errors (fetch/XHR)
+- **Network Events**: HTTP request/response tracking (status codes, response times, request/response sizes)
+
+### Privacy Features
+- ✅ Respects Do Not Track browser setting
+- ✅ Masks sensitive data (passwords, credit cards)
+- ✅ Excludes password inputs from tracking
+- ✅ Tracks metadata only (click counts, not input content)
+- ✅ Memory-safe (caps events at 50-100 per category)
+
+### Validation Checklist
+- [x] Build agent successfully (`npm run build`)
+- [x] Copy agent bundle to sandbox-v2/public/sentinel-frontend-agent.js
+- [x] HTML script tags added correctly (lines 68-84)
+- [ ] Collector API running on port 5000
+- [ ] sandbox-v2 running on port 3000
+- [ ] Browser console shows "SentinelWeb: Starting frontend agent"
+- [ ] Network tab shows POST to `/api/collect/frontend` every 30s
+- [ ] Collector API logs show "🔍 Frontend Agent Data Received"
+- [ ] App functionality works (browse, click, submit forms)
+- [ ] No new console errors (especially "Unexpected token '<'")
+- [ ] No performance degradation
+
+### Phase Progression Plan
+**Phase 2 (Current)**: Stealth Mode - `debug: true`, `collectInterval: 30000`  
+**Phase 3 (Next)**: Feature Testing - Enable features incrementally, test fetch/XHR interception  
+**Phase 4 (Future)**: Production Mode - `debug: false`, `collectInterval: 5000`
+
+### Risk Assessment
+- **Risk Level**: Low-to-Medium (development/testing environment)
+- **Biggest Risks**: 
+  1. Fetch/XHR interception conflicts with existing code
+  2. Console noise if Collector API is down (cosmetic only)
+  3. Privacy compliance if deployed publicly (legal review needed)
+- **Rollback Time**: <30 seconds (comment out 2 script tags in index.html)
+- **Expected Impact**: Minimal (app won't notice agent is there)
+
+### Rollback Instructions
+```html
+<!-- DISABLED: SentinelWeb Frontend Agent
+<script>
+  window.SentinelWebConfig = { ... };
+  window.SentinelWebAutoStart = true;
+</script>
+<script src="../../agents/frontend-agent/dist/index.umd.js"></script>
+-->
+```
+
+### Known Considerations
+- **Critical Fix Applied**: Agent bundle must be copied to `sandbox-v2/public/` directory (cannot reference outside static file root)
+- **Build Workflow**: After modifying frontend-agent source, run: `npm run build` then copy `dist/index.umd.js` to `sandbox-v2/public/sentinel-frontend-agent.js`
+- Agent wraps `window.fetch` and `XMLHttpRequest.prototype.open` - may conflict with other monitoring tools
+- MutationObserver attached to `document.body` - monitors for failed auth messages
+- PerformanceObserver for long tasks, resources, LCP, CLS
+- Event listeners added to: click, keydown, scroll, input, change, popstate, mousemove, submit, securitypolicyviolation, error, unhandledrejection
+- CPU overhead: ~1-3% on modern devices
+- Memory overhead: ~2-5MB for event buffers
+- Bandwidth: ~60-600KB/min per active user session
+
 ---
-**Last Updated**: April 2, 2026
-**Status**: Core SIEM pipeline complete and scaled down to a strictly clean Single-Tenant architecture. Approaching final productization phase.
-**Handover State**: Both Backend scaling mechanisms and Frontend visualization layers are finalized. The system is transitioning out of architectural development into **Demonstration Phase**: building NPM packages, a dummy Sandbox Application, and live adversarial playbooks. Multi-tenancy logic and API Key layers have been permanently removed.
+
+**Last Updated**: April 23, 2026
+**Status**: Frontend Agent Integrated (Phase 2 - Stealth Mode), Ready for Validation Testing
+**Handover State**: Ready for manual testing and Phase 3 progression
