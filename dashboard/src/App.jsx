@@ -1,9 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
-import { ShieldAlert, Activity, Gauge } from 'lucide-react';
+import { ShieldAlert, Activity, Gauge, Monitor } from 'lucide-react';
 
 import LiveFeed from './pages/LiveFeed';
 import Performance from './pages/Performance';
+import FrontendMetrics from './pages/FrontendMetrics';
 import AlertDetails from './pages/AlertDetails';
 import { SessionProvider } from './contexts/SessionContext';
 import { EngineStatusProvider, useEngineStatus } from './contexts/EngineStatusContext';
@@ -49,6 +50,12 @@ const Sidebar = () => {
         >
           <Gauge size={18} /> Performance
         </NavLink>
+        <NavLink
+          to="/frontend-metrics"
+          className={({ isActive }) => `flex items-center gap-3 px-4 py-3 rounded-md transition-colors text-sm font-bold tracking-wide uppercase ${isActive ? 'bg-violet-900/30 text-violet-300 border border-violet-900/50' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'}`}
+        >
+          <Monitor size={18} /> Frontend Metrics
+        </NavLink>
       </nav>
       
       <div className="absolute bottom-8 left-0 w-full px-6">
@@ -72,6 +79,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<LiveFeed />} />
           <Route path="/performance" element={<Performance />} />
+          <Route path="/frontend-metrics" element={<FrontendMetrics />} />
           <Route path="/alerts/:id" element={<AlertDetails />} />
         </Routes>
       </main>

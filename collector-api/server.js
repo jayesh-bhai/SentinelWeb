@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { createBehaviorsRouter } from './routes/behaviors.js';
 import { createActiveThreatsRouter } from './routes/active_threats.js';
 import { createBackendRuntimeRouter } from './routes/backend_runtime.js';
+import { createFrontendRuntimeRouter } from './routes/frontend_runtime.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -182,6 +183,7 @@ app.use('/api/stats', createStatsRouter(detectionEngine.persistence.db, {
 app.use('/api/behaviors', createBehaviorsRouter(detectionEngine.stateManager));
 app.use('/api/active-threats', createActiveThreatsRouter(detectionEngine.persistence.db, detectionEngine.stateManager));
 app.use('/api/runtime', createBackendRuntimeRouter(detectionEngine.persistence.db));
+app.use('/api/runtime', createFrontendRuntimeRouter(detectionEngine.persistence.db));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
